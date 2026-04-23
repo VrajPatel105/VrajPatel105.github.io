@@ -1,0 +1,677 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Shape Reference — Transformer Forward Pass</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-size: 15px;
+      line-height: 1.65;
+      background: #EDE8DF;
+      color: #2E2318;
+    }
+
+    #progress-bar {
+      position: fixed; top: 0; left: 0; height: 3px; width: 0;
+      background: #BF6030; z-index: 999; transition: width 0.08s linear;
+    }
+
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 52px 32px 120px;
+    }
+
+    .card {
+      background: #FDFAF5;
+      border-radius: 20px;
+      padding: 64px 88px;
+      box-shadow: 0 4px 48px rgba(60,35,10,0.11), 0 1px 4px rgba(60,35,10,0.06);
+    }
+
+    /* ── Page header ── */
+    .page-header {
+      margin-bottom: 44px;
+      padding-bottom: 32px;
+      border-bottom: 1px solid #EDE4D6;
+    }
+
+    .eyebrow {
+      font-size: 0.67rem;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: #BF6030;
+      margin-bottom: 12px;
+    }
+
+    .page-header h1 {
+      font-family: 'Fraunces', Georgia, serif;
+      font-size: clamp(1.5rem, 3vw, 2rem);
+      font-weight: 700;
+      letter-spacing: -0.022em;
+      line-height: 1.18;
+      color: #160D04;
+      margin-bottom: 8px;
+    }
+
+    .page-header p { font-size: 0.84rem; color: #A89278; margin: 0; }
+
+    .back-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 0.79rem;
+      font-weight: 600;
+      color: #BF6030;
+      text-decoration: none;
+      margin-top: 14px;
+    }
+    .back-link:hover { text-decoration: underline; }
+
+    /* ── Shape journey ── */
+    .shape-journey {
+      background: #1C1510;
+      border-radius: 12px;
+      padding: 18px 24px;
+      margin-bottom: 52px;
+      font-family: 'DM Mono', monospace;
+      font-size: 0.78rem;
+      line-height: 2.1;
+      color: #E8DDD0;
+      overflow-x: auto;
+      white-space: nowrap;
+      box-shadow: 0 2px 16px rgba(0,0,0,0.18);
+    }
+    .shape-journey .s  { color: #F0A86A; }
+    .shape-journey .op { color: #C8A0F0; }
+    .shape-journey .ar { color: #6FD08C; }
+    .shape-journey .note {
+      display: block;
+      color: #9A8A78;
+      font-size: 0.72rem;
+      white-space: normal;
+      margin-top: 2px;
+    }
+
+    /* ── Flow: the main vertical spine ── */
+    .flow { display: flex; flex-direction: column; align-items: center; }
+
+    /* Stage = one logical step in the pipeline */
+    .stage {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    /* Stage header */
+    .stage-header {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    .stage-num {
+      font-size: 0.63rem;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: #BF6030;
+      flex-shrink: 0;
+    }
+
+    .stage-header h2 {
+      font-family: 'Fraunces', Georgia, serif;
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: #160D04;
+      letter-spacing: -0.012em;
+    }
+
+    .stage-header::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: #EDE4D6;
+    }
+
+    /* Image inside a stage — single column by default */
+    .img-block {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+
+    .img-block img {
+      display: block;
+      height: auto;
+      border-radius: 8px;
+      width: 68%;        /* default */
+    }
+
+    .img-block.full img   { width: 96%; }
+    .img-block.wide img   { width: 84%; }
+    .img-block.medium img { width: 68%; }
+    .img-block.narrow img { width: 52%; }
+    .img-block.small img  { width: 38%; }
+
+    .cap {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.71rem;
+      color: #B09878;
+      text-align: center;
+      margin-top: 8px;
+      line-height: 1.45;
+    }
+
+    /* Two images side by side — only for true pairs */
+    .pair {
+      width: 100%;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      margin-bottom: 16px;
+    }
+
+    .pair-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      background: #FAF6F0;
+      border: 1px solid #EDE4D6;
+      border-radius: 10px;
+      padding: 16px 12px 12px;
+    }
+
+    .pair-item img {
+      width: 100%;
+      height: auto;
+      border-radius: 6px;
+    }
+
+    .pair-item .cap { margin-top: 8px; }
+
+    /* Three across — only for Q/K/V projection trios */
+    .trio {
+      width: 100%;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .trio-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      background: #FAF6F0;
+      border: 1px solid #EDE4D6;
+      border-radius: 10px;
+      padding: 14px 10px 10px;
+    }
+
+    .trio-item img { width: 100%; height: auto; border-radius: 6px; }
+    .trio-item .cap { margin-top: 6px; }
+
+    /* Connector arrow between stages */
+    .connector {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin: 8px 0 24px;
+      gap: 4px;
+    }
+
+    .connector-line {
+      width: 1px;
+      height: 28px;
+      background: #D4BFA8;
+    }
+
+    .connector-chip {
+      background: #F0E8DC;
+      border: 1px solid #DDD0BC;
+      border-radius: 100px;
+      padding: 4px 14px;
+      font-family: 'DM Mono', monospace;
+      font-size: 0.72rem;
+      color: #6B4E32;
+      white-space: nowrap;
+    }
+
+    .connector-chip .highlight { color: #BF6030; font-weight: 500; }
+
+    /* Divider between major phases (encoder / decoder) */
+    .phase-divider {
+      width: 100%;
+      margin: 40px 0;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .phase-divider::before,
+    .phase-divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: #D4BFA8;
+    }
+
+    .phase-label {
+      font-size: 0.65rem;
+      font-weight: 700;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: #C4A882;
+      flex-shrink: 0;
+    }
+
+    /* Back to top */
+    #back-top {
+      position: fixed; bottom: 28px; right: 28px;
+      width: 38px; height: 38px;
+      background: #BF6030; color: #fff;
+      border: none; border-radius: 50%;
+      font-size: 1rem; cursor: pointer;
+      opacity: 0; pointer-events: none;
+      transition: opacity 0.2s; z-index: 100;
+    }
+    #back-top.visible { opacity: 1; pointer-events: auto; }
+
+    @media (max-width: 640px) {
+      .card { padding: 36px 22px; }
+      .pair { grid-template-columns: 1fr; }
+      .trio { grid-template-columns: 1fr; }
+      .img-block img,
+      .img-block.wide img,
+      .img-block.medium img,
+      .img-block.narrow img,
+      .img-block.small img { width: 100%; }
+    }
+  </style>
+</head>
+<body>
+
+<div id="progress-bar"></div>
+<button id="back-top" aria-label="Back to top">↑</button>
+
+<div class="container">
+<div class="card">
+
+  <!-- HEADER -->
+  <div class="page-header">
+    <div class="eyebrow">Shape Reference &nbsp;·&nbsp; Forward Pass</div>
+    <h1>Transformer Shape Trace</h1>
+    <p>Key diagrams only, in order. Every shape transformation from input to output.</p>
+    <a class="back-link" href="index.html">← Read the full post</a>
+  </div>
+
+  <!-- FULL JOURNEY -->
+  <div class="shape-journey">
+    <span class="s">(2,&thinsp;4)</span> <span class="ar">→</span> <span class="op">embed</span> <span class="ar">→</span> <span class="s">(2,&thinsp;4,&thinsp;4)</span> <span class="ar">→</span> <span class="op">+PE</span> <span class="ar">→</span> <span class="s">(2,&thinsp;4,&thinsp;4)</span> <span class="ar">→</span> <span class="op">MHA</span> <span class="ar">→</span> <span class="s">(2,&thinsp;4,&thinsp;4)</span> <span class="ar">→</span> <span class="op">Add&amp;Norm</span> <span class="ar">→</span> <span class="s">(2,&thinsp;4,&thinsp;4)</span> <span class="ar">→</span> <span class="op">FFN</span> <span class="ar">→</span> <span class="s">(2,&thinsp;4,&thinsp;4)</span><br>
+    <span class="ar">→</span> <span class="op">masked&thinsp;MHA</span> <span class="ar">→</span> <span class="s">(2,&thinsp;4,&thinsp;4)</span> <span class="ar">→</span> <span class="op">cross&thinsp;attn</span> <span class="ar">→</span> <span class="s">(2,&thinsp;4,&thinsp;4)</span> <span class="ar">→</span> <span class="op">FFN</span> <span class="ar">→</span> <span class="s">(2,&thinsp;4,&thinsp;4)</span> <span class="ar">→</span> <span class="op">linear</span> <span class="ar">→</span> <span class="s">(2,&thinsp;4,&thinsp;14)</span> <span class="ar">→</span> <span class="op">argmax</span> <span class="ar">→</span> <span class="s">(2,&thinsp;4)</span>
+    <span class="note">d_model=4 · 2 heads · batch=2 · seq_len=4</span>
+  </div>
+
+
+  <div class="flow">
+
+    <!-- ─── INPUT ─── -->
+    <div class="stage">
+      <div class="stage-header">
+        <span class="stage-num">Input</span>
+        <h2>Token IDs</h2>
+      </div>
+      <div class="pair">
+        <div class="pair-item">
+          <img src="images/02_batch1_src_tgt_embeddings_2x4x4.svg" alt="">
+          <div class="cap">Batch 1 — src &amp; tgt token IDs</div>
+        </div>
+        <div class="pair-item">
+          <img src="images/03_batch2_src_tgt_embeddings_2x5x4.svg" alt="">
+          <div class="cap">Batch 2 — src &amp; tgt token IDs</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="connector">
+      <div class="connector-line"></div>
+      <div class="connector-chip">embed lookup <span class="highlight">(2,&thinsp;4) → (2,&thinsp;4,&thinsp;4)</span></div>
+      <div class="connector-line"></div>
+    </div>
+
+    <!-- ─── EMBEDDINGS + PE ─── -->
+    <div class="stage">
+      <div class="stage-header">
+        <span class="stage-num">02</span>
+        <h2>Embeddings + Positional Encoding</h2>
+      </div>
+      <div class="img-block medium">
+        <img src="images/04_initial_encoder_embeddings_2x4x4.svg" alt="">
+        <div class="cap">Initial embeddings · (2, 4, 4)</div>
+      </div>
+      <div class="img-block full">
+        <img src="images/05_encoder_before_after_pe_both_batches.svg" alt="">
+        <div class="cap">Before &amp; after positional encoding — both batches</div>
+      </div>
+      <div class="img-block medium">
+        <img src="images/06_encoder_after_pe_tensor_2x4x4.svg" alt="">
+        <div class="cap">Post-PE encoder input · (2, 4, 4)</div>
+      </div>
+    </div>
+
+    <div class="connector">
+      <div class="connector-line"></div>
+      <div class="connector-chip">project through W_Q, W_K, W_V <span class="highlight">(2,&thinsp;4,&thinsp;4) stays (2,&thinsp;4,&thinsp;4)</span></div>
+      <div class="connector-line"></div>
+    </div>
+
+    <!-- ─── ENCODER MHA ─── -->
+    <div class="stage">
+      <div class="stage-header">
+        <span class="stage-num">03</span>
+        <h2>Encoder: Multi-Head Attention</h2>
+      </div>
+
+      <div class="img-block medium">
+        <img src="images/08_wq_wk_wv_wo_random_init.svg" alt="">
+        <div class="cap">W_Q · W_K · W_V · W_O — four (4, 4) weight matrices</div>
+      </div>
+
+      <div class="img-block medium">
+        <img src="images/09_encoder_qkv_input_tensors_2x4x4.svg" alt="">
+        <div class="cap">Q, K, V inputs — three identical copies of post-PE tensor · (2, 4, 4)</div>
+      </div>
+
+      <div class="img-block medium">
+        <img src="images/13_encoder_qkv_after_projection_2x4x4.svg" alt="">
+        <div class="cap">Q, K, V after projection — still (2, 4, 4) each</div>
+      </div>
+
+      <div class="img-block wide">
+        <img src="images/14_attn_scores_qkt_shape_derivation.svg" alt="">
+        <div class="cap">QK^T shape — (2,2,4,2) × (2,2,2,4) = (2,2,4,4) · heads split here</div>
+      </div>
+
+      <div class="img-block full">
+        <img src="images/16_encoder_before_after_softmax_2x2x4x4.svg" alt="">
+        <div class="cap">Attention scores before &amp; after softmax · (2, 2, 4, 4)</div>
+      </div>
+
+      <div class="img-block wide">
+        <img src="images/17_attn_scores_v_shape_derivation_2x2x4x2.svg" alt="">
+        <div class="cap">Scores × V — (2,2,4,4) × (2,2,4,2) = (2,2,4,2)</div>
+      </div>
+
+      <div class="img-block full">
+        <img src="images/19_mha_shape_transform_2244_to_244.svg" alt="">
+        <div class="cap">Concat heads + W_O — (2,2,4,2) → (2,4,4)</div>
+      </div>
+
+      <div class="img-block small">
+        <img src="images/20_encoder_mha_input_output_2x4x4.svg" alt="">
+        <div class="cap">MHA summary — in (2,4,4) → out (2,4,4)</div>
+      </div>
+    </div>
+
+    <div class="connector">
+      <div class="connector-line"></div>
+      <div class="connector-chip">residual + LayerNorm <span class="highlight">(2,&thinsp;4,&thinsp;4) → (2,&thinsp;4,&thinsp;4)</span></div>
+      <div class="connector-line"></div>
+    </div>
+
+    <!-- ─── ADD & NORM ─── -->
+    <div class="stage">
+      <div class="stage-header">
+        <span class="stage-num">04</span>
+        <h2>Encoder: Add &amp; Norm</h2>
+      </div>
+      <div class="img-block small">
+        <img src="images/21_add_norm_input_output_2x4x4.svg" alt="">
+        <div class="cap">Add &amp; Norm — in (2,4,4) → out (2,4,4)</div>
+      </div>
+    </div>
+
+    <div class="connector">
+      <div class="connector-line"></div>
+      <div class="connector-chip">Linear(4→16) → ReLU → Linear(16→4) <span class="highlight">expands then compresses</span></div>
+      <div class="connector-line"></div>
+    </div>
+
+    <!-- ─── ENCODER FFN ─── -->
+    <div class="stage">
+      <div class="stage-header">
+        <span class="stage-num">05</span>
+        <h2>Encoder: Feed-Forward Network</h2>
+      </div>
+      <div class="img-block full">
+        <img src="images/22_ffn_forward_pass_diagram.svg" alt="">
+        <div class="cap">FFN — Linear(4→16), ReLU, Linear(16→4)</div>
+      </div>
+      <div class="img-block wide">
+        <img src="images/23_ffn_after_relu_2x4x16.svg" alt="">
+        <div class="cap">After ReLU — negatives zeroed · (2, 4, 16)</div>
+      </div>
+      <div class="img-block medium">
+        <img src="images/24_ffn_after_linear2_add_norm_2x4x4.svg" alt="">
+        <div class="cap">After Linear2 + Add &amp; Norm — back to (2, 4, 4)</div>
+      </div>
+    </div>
+
+    <div class="connector">
+      <div class="connector-line"></div>
+      <div class="connector-chip">encoder complete <span class="highlight">output (2,&thinsp;4,&thinsp;4) → decoder cross-attention</span></div>
+      <div class="connector-line"></div>
+    </div>
+
+    <!-- ─── ENCODER OUTPUT ─── -->
+    <div class="stage">
+      <div class="stage-header">
+        <span class="stage-num">06</span>
+        <h2>Encoder Output</h2>
+      </div>
+      <div class="img-block small">
+        <img src="images/25_final_encoder_tensor_2x4x4.svg" alt="">
+        <div class="cap">Final encoder output · (2, 4, 4)</div>
+      </div>
+    </div>
+
+    <!-- PHASE DIVIDER -->
+    <div class="phase-divider">
+      <span class="phase-label">Encoder done · Decoder begins</span>
+    </div>
+
+    <!-- ─── DECODER SETUP ─── -->
+    <div class="stage">
+      <div class="stage-header">
+        <span class="stage-num">07</span>
+        <h2>Decoder: Setup &amp; Embeddings</h2>
+      </div>
+      <div class="img-block small">
+        <img src="images/26_decoder_architecture_block.svg" alt="">
+        <div class="cap">Decoder block — masked MHA · cross-attn · FFN</div>
+      </div>
+      <div class="img-block full">
+        <img src="images/28_decoder_before_after_pe_2x4x4.svg" alt="">
+        <div class="cap">German tokens — before &amp; after positional encoding · (2, 4, 4)</div>
+      </div>
+      <div class="img-block medium">
+        <img src="images/30_decoder_after_pe_final_2x4x4.svg" alt="">
+        <div class="cap">Decoder input after PE · (2, 4, 4)</div>
+      </div>
+    </div>
+
+    <div class="connector">
+      <div class="connector-line"></div>
+      <div class="connector-chip">self-attention with causal mask <span class="highlight">future positions → −1e9</span></div>
+      <div class="connector-line"></div>
+    </div>
+
+    <!-- ─── DECODER MASKED MHA ─── -->
+    <div class="stage">
+      <div class="stage-header">
+        <span class="stage-num">08</span>
+        <h2>Decoder: Masked Multi-Head Attention</h2>
+      </div>
+
+      <div class="img-block medium">
+        <img src="images/33_decoder_qkv_positional_encoded_tensors.svg" alt="">
+        <div class="cap">Q, K, V inputs — post-PE decoder tensor · (2, 4, 4)</div>
+      </div>
+
+      <div class="trio">
+        <div class="trio-item">
+          <img src="images/34_decoder_q_wkv_projections.svg" alt="">
+          <div class="cap">Q = x · W_Q.T</div>
+        </div>
+        <div class="trio-item">
+          <img src="images/34_decoder_k_wkv_projections.svg" alt="">
+          <div class="cap">K = x · W_K.T</div>
+        </div>
+        <div class="trio-item">
+          <img src="images/34_decoder_v_wkv_projections.svg" alt="">
+          <div class="cap">V = x · W_V.T</div>
+        </div>
+      </div>
+
+      <div class="img-block full">
+        <img src="images/38_masked_fill_neg1e9_both_batches.svg" alt="">
+        <div class="cap">Masked fill — future &amp; PAD positions set to −1e9 · (2, 2, 4, 4)</div>
+      </div>
+
+      <div class="img-block full">
+        <img src="images/39_masked_attn_after_softmax_2x2x4x4.svg" alt="">
+        <div class="cap">After softmax — causal staircase in Batch 1 · (2, 2, 4, 4)</div>
+      </div>
+
+      <div class="img-block small">
+        <img src="images/43_masked_attn_add_norm_output_2x4x4.svg" alt="">
+        <div class="cap">After Add &amp; Norm · (2, 4, 4)</div>
+      </div>
+    </div>
+
+    <div class="connector">
+      <div class="connector-line"></div>
+      <div class="connector-chip">Q from decoder · K &amp; V from encoder <span class="highlight">bridge between the two</span></div>
+      <div class="connector-line"></div>
+    </div>
+
+    <!-- ─── CROSS-ATTENTION ─── -->
+    <div class="stage">
+      <div class="stage-header">
+        <span class="stage-num">09</span>
+        <h2>Decoder: Cross-Attention</h2>
+      </div>
+
+      <div class="trio">
+        <div class="trio-item">
+          <img src="images/44_cross_attn_q_projections.svg" alt="">
+          <div class="cap">Q = decoder · W_Q.T</div>
+        </div>
+        <div class="trio-item">
+          <img src="images/44_cross_attn_k_projections.svg" alt="">
+          <div class="cap">K = enc_out · W_K.T</div>
+        </div>
+        <div class="trio-item">
+          <img src="images/44_cross_attn_v_projections.svg" alt="">
+          <div class="cap">V = enc_out · W_V.T</div>
+        </div>
+      </div>
+
+      <div class="img-block full">
+        <img src="images/48_cross_attn_after_softmax_2x2x4x4.svg" alt="">
+        <div class="cap">Cross-attn after softmax — no causal mask, PAD only · (2, 2, 4, 4)</div>
+      </div>
+
+      <div class="img-block small">
+        <img src="images/51_cross_attn_add_norm_output_2x4x4.svg" alt="">
+        <div class="cap">After Add &amp; Norm · (2, 4, 4)</div>
+      </div>
+    </div>
+
+    <div class="connector">
+      <div class="connector-line"></div>
+      <div class="connector-chip">same FFN as encoder <span class="highlight">(2,&thinsp;4,&thinsp;4) → expand → compress → (2,&thinsp;4,&thinsp;4)</span></div>
+      <div class="connector-line"></div>
+    </div>
+
+    <!-- ─── DECODER FFN ─── -->
+    <div class="stage">
+      <div class="stage-header">
+        <span class="stage-num">10</span>
+        <h2>Decoder: FFN + Final Output</h2>
+      </div>
+      <div class="img-block small">
+        <img src="images/54_final_decoder_output_tensor_2x4x4.svg" alt="">
+        <div class="cap">Final decoder output · (2, 4, 4)</div>
+      </div>
+    </div>
+
+    <div class="connector">
+      <div class="connector-line"></div>
+      <div class="connector-chip">Linear(4→14) + softmax <span class="highlight">(2,&thinsp;4,&thinsp;4) → (2,&thinsp;4,&thinsp;14)</span></div>
+      <div class="connector-line"></div>
+    </div>
+
+    <!-- ─── PROJECTION ─── -->
+    <div class="stage">
+      <div class="stage-header">
+        <span class="stage-num">11</span>
+        <h2>Projection &amp; Predictions</h2>
+      </div>
+
+      <div class="img-block wide">
+        <img src="images/56_linear_dmodel4_to_vocab14.svg" alt="">
+        <div class="cap">Linear(4→14) — one score per German word · (2, 4, 14)</div>
+      </div>
+
+      <div class="img-block full">
+        <img src="images/57_softmax_output_2x4x14.svg" alt="">
+        <div class="cap">Softmax — each row a probability distribution over 14 tokens · (2, 4, 14)</div>
+      </div>
+
+      <div class="img-block small">
+        <img src="images/58_argmax_predicted_tokens_2x4.svg" alt="">
+        <div class="cap">Argmax — predicted token IDs · (2, 4)</div>
+      </div>
+    </div>
+
+    <div class="connector">
+      <div class="connector-line"></div>
+      <div class="connector-chip" style="background:#F0E8DC; border-color:#BF6030;">
+        <span class="highlight">Input (2, 4) = Output (2, 4) · shape contract preserved</span>
+      </div>
+    </div>
+
+  </div><!-- /flow -->
+
+</div>
+</div>
+
+<script>
+  const bar = document.getElementById('progress-bar');
+  const btn = document.getElementById('back-top');
+  window.addEventListener('scroll', () => {
+    const pct = window.scrollY / (document.documentElement.scrollHeight - window.innerHeight) * 100;
+    bar.style.width = Math.min(pct, 100) + '%';
+    btn.classList.toggle('visible', window.scrollY > 400);
+  });
+  btn.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
+</script>
+
+</body>
+</html>
