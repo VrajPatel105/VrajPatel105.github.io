@@ -5,6 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Shape Reference — Transformer Forward Pass</title>
 
+  <meta property="og:title" content="I Built a Transformer From Scratch. Here's the Shape Trace Nobody Shows You." />
+  <meta property="og:description" content="Full forward pass traced with real numbers — every matmul, reshape, softmax, residual. Encoder and decoder." />
+  <meta property="og:image" content="https://vrajpatel105.github.io/transformer-trace/images/55_projection_layer_code_linear_diagram.svg" />
+  <meta property="og:url" content="https://vrajpatel105.github.io/transformer-trace/shapes.html" />
+  <meta property="og:type" content="article" />
+
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
 
@@ -280,6 +286,36 @@
       flex-shrink: 0;
     }
 
+    /* ── Notes images — handwritten conceptual context ── */
+    .note-aside {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin-bottom: 24px;
+      padding: 18px 0 20px;
+      border-top: 1px dashed #DDD0BC;
+      border-bottom: 1px dashed #DDD0BC;
+    }
+
+    .note-aside-label {
+      align-self: flex-start;
+      font-size: 0.6rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
+      color: #C4A882;
+      margin-bottom: 10px;
+    }
+
+    .note-aside img {
+      width: 72%;
+      height: auto;
+      border-radius: 8px;
+    }
+
+    .note-aside .cap { margin-top: 8px; }
+
     /* Back to top */
     #back-top {
       position: fixed; bottom: 28px; right: 28px;
@@ -354,6 +390,13 @@
       <div class="connector-line"></div>
     </div>
 
+    <!-- ─── ENCODER NOTES OVERVIEW ─── -->
+    <div class="note-aside">
+      <div class="note-aside-label">Encoder block — conceptual overview</div>
+      <img src="images/notes-encoder-block.svg" alt="Encoder block architecture notes">
+      <div class="cap">Full encoder: self-attention → Add &amp; Norm → FFN → Add &amp; Norm, repeated N×</div>
+    </div>
+
     <!-- ─── EMBEDDINGS + PE ─── -->
     <div class="stage">
       <div class="stage-header">
@@ -378,6 +421,13 @@
       <div class="connector-line"></div>
       <div class="connector-chip">project through W_Q, W_K, W_V <span class="highlight">(2,&thinsp;4,&thinsp;4) stays (2,&thinsp;4,&thinsp;4)</span></div>
       <div class="connector-line"></div>
+    </div>
+
+    <!-- ─── QKV NOTES OVERVIEW ─── -->
+    <div class="note-aside">
+      <div class="note-aside-label">Q · K · V — conceptual flow</div>
+      <img src="images/notes-qkv-flow.svg" alt="Q K V flow notes">
+      <div class="cap">Each token's embedding splits into Q, K, V via learned weight matrices W_Q, W_K, W_V</div>
     </div>
 
     <!-- ─── ENCODER MHA ─── -->
@@ -493,6 +543,13 @@
     <!-- PHASE DIVIDER -->
     <div class="phase-divider">
       <span class="phase-label">Encoder done · Decoder begins</span>
+    </div>
+
+    <!-- ─── DECODER NOTES OVERVIEW ─── -->
+    <div class="note-aside">
+      <div class="note-aside-label">Decoder block — conceptual overview</div>
+      <img src="images/notes-decoder-block.svg" alt="Decoder block architecture notes">
+      <div class="cap">Full decoder: masked self-attention → cross-attention → FFN, each with Add &amp; Norm</div>
     </div>
 
     <!-- ─── DECODER SETUP ─── -->
