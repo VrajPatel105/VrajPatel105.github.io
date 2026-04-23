@@ -162,6 +162,72 @@
       gap: 4px;
     }
 
+    /* ── Notes list (style 3) ── */
+    .notes-list {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .note-row {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      text-decoration: none;
+      color: inherit;
+      padding: 13px 0;
+      border-bottom: 1px solid #DDD0BC;
+      transition: padding-left 0.15s;
+    }
+
+    .note-row:first-child { border-top: 1px solid #DDD0BC; }
+
+    .note-row:hover { padding-left: 8px; }
+    .note-row:hover .note-title { color: #BF6030; }
+
+    .note-icon {
+      width: 32px;
+      height: 32px;
+      background: #F0E8DC;
+      border-radius: 8px;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #BF6030;
+    }
+
+    .note-body { flex: 1; min-width: 0; }
+
+    .note-title {
+      font-family: 'Fraunces', Georgia, serif;
+      font-size: 0.975rem;
+      font-weight: 600;
+      color: #160D04;
+      letter-spacing: -0.01em;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      transition: color 0.15s;
+    }
+
+    .note-sub {
+      font-size: 0.7rem;
+      color: #7A5C3E;
+      margin-top: 1px;
+    }
+
+    .note-badge {
+      font-size: 0.6rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: #BF6030;
+      background: #F5EBE0;
+      border-radius: 4px;
+      padding: 2px 7px;
+      flex-shrink: 0;
+    }
+
     /* ── Footer ── */
     footer {
       margin-top: 80px;
@@ -209,6 +275,78 @@
         <span class="read-link">Read →</span>
       </div>
     </a>
+  </div>
+
+  <div class="section-label" style="margin-top: 64px;">Notes</div>
+
+  <div class="notes-list">
+
+    <a href="notes/ann.pdf" target="_blank" rel="noopener" class="note-row">
+      <div class="note-icon">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14,2 14,8 20,8"/></svg>
+      </div>
+      <div class="note-body">
+        <div class="note-title">Artificial Neural Networks</div>
+        <div class="note-sub">Deep Learning · Foundations</div>
+      </div>
+      <div class="note-badge">PDF</div>
+    </a>
+
+    <a href="notes/optimizing-nn.pdf" target="_blank" rel="noopener" class="note-row">
+      <div class="note-icon">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14,2 14,8 20,8"/></svg>
+      </div>
+      <div class="note-body">
+        <div class="note-title">Optimizing Neural Networks</div>
+        <div class="note-sub">Deep Learning · Optimization</div>
+      </div>
+      <div class="note-badge">PDF</div>
+    </a>
+
+    <a href="notes/cnn.pdf" target="_blank" rel="noopener" class="note-row">
+      <div class="note-icon">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14,2 14,8 20,8"/></svg>
+      </div>
+      <div class="note-body">
+        <div class="note-title">Deep Learning for Computer Vision</div>
+        <div class="note-sub">Computer Vision · CNN</div>
+      </div>
+      <div class="note-badge">PDF</div>
+    </a>
+
+    <a href="notes/rnn.pdf" target="_blank" rel="noopener" class="note-row">
+      <div class="note-icon">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14,2 14,8 20,8"/></svg>
+      </div>
+      <div class="note-body">
+        <div class="note-title">Recurrent Neural Networks</div>
+        <div class="note-sub">Sequence Models · RNN</div>
+      </div>
+      <div class="note-badge">PDF</div>
+    </a>
+
+    <a href="notes/encoder-decoder.pdf" target="_blank" rel="noopener" class="note-row">
+      <div class="note-icon">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14,2 14,8 20,8"/></svg>
+      </div>
+      <div class="note-body">
+        <div class="note-title">Encoder–Decoder Mechanism</div>
+        <div class="note-sub">Transformers · Architecture</div>
+      </div>
+      <div class="note-badge">PDF</div>
+    </a>
+
+    <a href="notes/transformer.pdf" target="_blank" rel="noopener" class="note-row">
+      <div class="note-icon">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14,2 14,8 20,8"/></svg>
+      </div>
+      <div class="note-body">
+        <div class="note-title">Transformer Architecture</div>
+        <div class="note-sub">Transformers · Full Architecture</div>
+      </div>
+      <div class="note-badge">PDF</div>
+    </a>
+
   </div>
 
   <footer>
