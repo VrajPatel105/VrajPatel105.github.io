@@ -476,8 +476,7 @@
       <li><a href="#decoder-setup">Decoder: Setup &amp; Embeddings</a></li>
       <li><a href="#decoder-masked-mha">Decoder: Masked Multi-Head Attention</a></li>
       <li><a href="#decoder-cross-attn">Decoder: Cross-Attention</a></li>
-      <li><a href="#decoder-ffn">Decoder: FFN + Final Output</a></li>
-      <li><a href="#projection">Projection Layer &amp; Predictions</a></li>
+      <li><a href="#decoder-ffn">Decoder: FFN &amp; Predictions</a></li>
       <li><a href="#whats-next">What Comes Next</a></li>
     </ol>
     <a href="shapes.html" class="diagrams-link">Just want the diagrams? &nbsp;<span>View the shape reference →</span></a>
@@ -488,13 +487,13 @@
   ══════════════════════════════════════ -->
   <section id="intro">
 
-    <p>Every Transformer explanation follows the same script. Here's the architecture diagram. Here's the attention formula. Here's a vague description of queries, keys, and values. Trust that it works.</p>
+    <p>Every Transformer explanation gives you the same four things: an architecture diagram, the attention formula, a paragraph about queries and keys, and the implicit signal that the rest is implementation detail. Most stop there.</p>
 
     <p>Nobody shows you what happens to the actual numbers.</p>
 
-    <p>Not what the formula produces in the abstract, what the tensor <em>contains</em>, position by position, after every single operation. Not shapes described in passing, shapes traced through a real forward pass on real data, with every intermediate step shown.</p>
+    <p>Not the formula in the abstract — what the tensor <em>contains</em> after each step. What Q looks like after the projection: not just "(B, heads, seq, d_k)" mentioned once in a caption, but the actual values and why they differ from the input. What the attention scores are before and after softmax, and what it means that every row sums to exactly 1. What the residual addition does to each vector, layer after layer. The gap between reading a Transformer explanation and being able to implement one is full of these unshown steps.</p>
 
-    <p>I built a Transformer from scratch for English-to-German translation, froze it with random weights, and ran two sentences through the full forward pass. Every matrix multiply, every reshape, every softmax, every residual addition. This is that trace.</p>
+    <p>I built a Transformer from scratch for English-to-German translation, initialized all weights randomly, and traced a complete forward pass on two real sentences — no training, no shortcuts. Every matrix multiply, every reshape, every softmax, every residual addition. This is that trace.</p>
 
     <p>The configuration is small on purpose: <strong>d_model=4</strong>, <strong>2 attention heads</strong>, <strong>batch_size=2</strong>, <strong>vocab_size=14</strong>. Each token becomes a 4-dimensional vector instead of GPT-2's 768 or GPT-3's 12,288. The operations are completely identical at any scale, keeping d_model=4 just makes the numbers something you can actually read and verify. Once you can follow this trace, you can follow any Transformer.</p>
 
@@ -760,10 +759,6 @@ class PositionalEncoding(nn.Module):
 
     <div class="weight-note">
       For this trace we reuse the same weight matrices across encoder and decoder attention blocks for simplicity. In a real trained model, each block has its own separate learned weights.
-    </div>
-
-    <div class="disclaimer">
-      All weight matrices in this trace are randomly initialized. This model has not been trained. The predictions at the end are noise, the point is the mechanics, not the result.
     </div>
 
     <h3>What is attention actually solving?</h3>
@@ -1254,13 +1249,13 @@ x = self.norm2(x + self.cross_attention(x, enc_output, enc_output, src_mask))
   <hr class="rule">
 
   <!-- ══════════════════════════════════════
-       SECTION 10: DECODER FFN + FINAL
+       SECTION 10: DECODER FFN + PREDICTIONS
   ══════════════════════════════════════ -->
   <section id="decoder-ffn">
     <div class="sec-label">10</div>
-    <h2>Decoder: FFN + Final Output</h2>
+    <h2>Decoder: FFN &amp; Predictions</h2>
 
-    <p>Same FFN structure as the encoder: Linear(4→16), ReLU, Linear(16→4), followed by a residual Add &amp; Norm. Each of the four decoder positions is processed independently. The FFN's role here is identical to its role in the encoder, transform the gathered representation within each position through non-linear computation.</p>
+    <p>The FFN is structurally identical to the encoder's: Linear(4→16), ReLU, Linear(16→4), residual Add &amp; Norm. Each decoder position is processed independently. What's different is what those vectors carry — by now, each one has absorbed cross-attention context from the English source on top of the causal self-attention context from masked MHA.</p>
 
     <p class="img-caption">Step 1: the FFN expands to 16 dims, applies ReLU, then compresses back. Residual added, LayerNorm applied — the third sub-layer's Add &amp; Norm.</p>
     <div class="diagram narrow">
@@ -1275,20 +1270,7 @@ x = self.norm2(x + self.cross_attention(x, enc_output, enc_output, src_mask))
       <img src="images/54_final_decoder_output_tensor_2x4x4.svg" alt="Final decoder output tensor, shape (2,4,4)">
     </div>
 
-    <p>The decoder is done. Shape: (2, 4, 4). Each of the 8 position vectors (2 batches × 4 tokens) now encodes a rich combination of source context and target-side causal history. But we still haven't answered: which German word does each position actually predict?</p>
-
-    <p class="transition">The decoder output is in d_model=4 space. We need it in vocabulary space, one score per possible German word. The projection layer makes that mapping.</p>
-
-  </section>
-
-  <hr class="rule">
-
-  <!-- ══════════════════════════════════════
-       SECTION 11: PROJECTION + PREDICTIONS
-  ══════════════════════════════════════ -->
-  <section id="projection">
-    <div class="sec-label">11</div>
-    <h2>Projection Layer &amp; Predictions</h2>
+    <p>The decoder block is done. Shape: (2, 4, 4). What's left is the question the whole trace has been building toward: which German word does each position actually predict? The decoder output is in d_model=4 space. We need one score per vocabulary token.</p>
 
     <div class="code-wrap">
 <pre><code class="language-python">class ProjectionLayer(nn.Module):
@@ -1303,9 +1285,7 @@ x = self.norm2(x + self.cross_attention(x, enc_output, enc_output, src_mask))
 </code></pre>
     </div>
 
-    <p>One linear layer maps each position's 4-dimensional decoder output to a 14-dimensional score vector, one score per German word in the vocabulary. These are raw logits: unnormalized, unbounded values where higher means the model gives more weight to that token.</p>
-
-    <p>Why project to vocab_size at all? Because the model needs to commit to a word. The continuous representation in d_model=4 space is expressive, but it doesn't yet say "I think the next word is <em>hallo</em>." The projection forces a decision by producing a score for every possible token in the vocabulary.</p>
+    <p>One linear layer maps each position's 4-dimensional vector to a 14-dimensional score vector — one score per German word. These are raw logits: unnormalized values where higher means the model favors that token. The projection forces the model to commit: the continuous d_model representation doesn't yet say "I think the next word is <em>hallo</em>," but the vocab-space scores do.</p>
 
     <div class="diagram arch">
       <img src="images/55_projection_layer_code_linear_diagram.svg" alt="Projection layer, Linear(d_model=4, vocab_size=14) applied to decoder output">
@@ -1315,34 +1295,30 @@ x = self.norm2(x + self.cross_attention(x, enc_output, enc_output, src_mask))
       <img src="images/56_linear_dmodel4_to_vocab14.svg" alt="Linear projection from d_model=4 to vocab_size=14, shape (2,4,14)">
     </div>
 
-    <p>After the linear: shape (2, 4, 14). Softmax over the last dimension turns raw logits into proper probabilities summing to 1.0. Now we have, for each of the 8 positions, a probability distribution over all 14 German tokens.</p>
+    <p>After the linear: shape (2, 4, 14). Softmax over the last dimension turns raw logits into probabilities summing to 1.0. Each of the 8 positions now holds a full distribution over all 14 German tokens.</p>
 
     <div class="diagram wide">
       <img src="images/57_softmax_output_2x4x14.svg" alt="Softmax output, shape (2,4,14), each row a probability distribution over 14 German tokens">
     </div>
     <div class="callout">
-      Each row is now a probability distribution over 14 German tokens, summing to 1.0. Argmax picks the highest, that's the prediction.
+      Each row is a probability distribution over 14 German tokens, summing to 1.0. Argmax picks the highest — that's the prediction. With random weights, these predictions are noise. The mechanics are the point.
     </div>
 
     <div class="diagram narrow">
       <img src="images/58_argmax_predicted_tokens_2x4.svg" alt="Argmax, predicted German token IDs, shape (2,4)">
     </div>
 
-    <p>Shape (2, 4, 14) → argmax over last dim → (2, 4). We're back to the same shape we started with. Token IDs in, token IDs out. The model's predictions are complete.</p>
-
-    <div class="disclaimer">
-      All weight matrices in this trace are randomly initialized. This model has not been trained. The predictions at the end are noise, the point is the mechanics, not the result.
-    </div>
+    <p>Shape (2, 4, 14) → argmax over last dim → (2, 4). Token IDs in, token IDs out. The model started and ended with the same shape — only the content changed.</p>
 
   </section>
 
   <hr class="rule">
 
   <!-- ══════════════════════════════════════
-       SECTION 12: WHAT COMES NEXT
+       SECTION 11: WHAT COMES NEXT
   ══════════════════════════════════════ -->
   <section id="whats-next">
-    <div class="sec-label">12</div>
+    <div class="sec-label">11</div>
     <h2>What Comes Next</h2>
 
     <p>Here's the full journey, retraced one last time:</p>
