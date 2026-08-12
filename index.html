@@ -1,377 +1,317 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Vraj Patel</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vraj Patel — GPU inference systems</title>
 
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,400&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<meta name="description" content="I build GPU inference systems from scratch: CUDA and Triton kernels, FlashAttention-2 forward and backward, INT8 post-training quantization. CS at UMass Dartmouth, graduating May 2027.">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Vraj Patel — GPU inference systems">
+<meta property="og:description" content="CUDA and Triton kernels, FlashAttention-2 forward and backward, INT8 post-training quantization — each benchmarked against the production baseline.">
+<meta property="og:url" content="https://vrajpatel105.github.io/">
+<meta name="twitter:card" content="summary">
 
-  <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 
-    body {
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
-      font-size: 16px;
-      line-height: 1.7;
-      color: #2E2318;
-      background: #EDE8DF;
-      min-height: 100vh;
-    }
+<style>
+  :root{
+    --canvas:#fafaf9;
+    --ink:#16181a;
+    --ink-2:#494c4f;
+    --ink-3:#7b7e81;
+    --line:#e2e1de;
+    --line-2:#cfcecb;
 
-    .container {
-      max-width: 720px;
-      margin: 0 auto;
-      padding: 80px 28px 120px;
-    }
+    /* two data roles, used consistently everywhere on the site */
+    --mine:#16181a;
+    --theirs:#c2c1bd;
 
-    /* ── Header ── */
-    header {
-      margin-bottom: 72px;
-    }
+    /* link color only — never a data mark, so it cannot compete with the pair */
+    --link:#3d3a8c;
 
-    .name {
-      font-family: 'Fraunces', Georgia, serif;
-      font-size: clamp(2rem, 5vw, 3rem);
-      font-weight: 700;
-      letter-spacing: -0.03em;
-      line-height: 1.1;
-      color: #160D04;
-      margin-bottom: 14px;
-    }
+    --mono:'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
 
-    .tagline {
-      font-size: 1rem;
-      color: #7A5C3E;
-      line-height: 1.6;
-      max-width: 460px;
-      margin-bottom: 24px;
-    }
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  html{-webkit-text-size-adjust:100%}
 
-    .social-row {
-      display: flex;
-      gap: 10px;
-      flex-wrap: wrap;
-    }
+  body{
+    background:var(--canvas);
+    color:var(--ink);
+    font-family:var(--mono);
+    font-size:13px;
+    line-height:1.5;
+    letter-spacing:-0.02em;
+    font-feature-settings:'tnum' 1,'zero' 1;
+    -webkit-font-smoothing:antialiased;
+  }
 
-    .social-link {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      font-size: 0.78rem;
-      font-weight: 600;
-      color: #8C6840;
-      text-decoration: none;
-      background: #F0E8DC;
-      border: 1px solid #DDD0BC;
-      border-radius: 100px;
-      padding: 5px 13px;
-      transition: background 0.15s, color 0.15s, border-color 0.15s;
-    }
+  .wrap{max-width:940px;margin:0 auto;padding:44px 24px 80px}
 
-    .social-link:hover {
-      background: #BF6030;
-      color: #fff;
-      border-color: #BF6030;
-    }
+  a{color:var(--link)}
+  a:focus-visible{outline:2px solid var(--link);outline-offset:3px;border-radius:2px}
 
-    /* ── Section label ── */
-    .section-label {
-      font-size: 0.65rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.14em;
-      color: #BF6030;
-      margin-bottom: 20px;
-    }
+  /* ── section head: one dense line + hairline ── */
+  .head{
+    display:flex;justify-content:space-between;align-items:baseline;gap:14px;
+    font-size:10.5px;letter-spacing:0.08em;text-transform:uppercase;
+    color:var(--ink-3);padding:10px 0;border-bottom:1px solid var(--ink);
+    margin:34px 0 18px;
+  }
+  .head b{color:var(--ink);font-weight:600}
+  /* proper nouns keep their real casing: cuBLAS, TFLOP/s, sm_89, PyTorch */
+  .tt-none{text-transform:none;letter-spacing:-0.01em}
+  code{font-family:inherit;font-size:1em}
+  em{font-style:normal;text-decoration:underline;text-underline-offset:2px}
 
-    /* ── Post card ── */
-    .post-list {
-      display: flex;
-      flex-direction: column;
-      gap: 2px;
-    }
+  /* ── hero ── */
+  header{margin-bottom:4px}
+  h1{font-size:1.7rem;font-weight:600;letter-spacing:-0.05em;line-height:1.1;margin-bottom:12px}
+  .positioning{font-size:13.5px;line-height:1.6;color:var(--ink-2);max-width:74ch;margin-bottom:14px}
 
-    .post-card {
-      display: block;
-      background: #FDFAF5;
-      border-radius: 14px;
-      padding: 28px 32px;
-      text-decoration: none;
-      color: inherit;
-      border: 1px solid transparent;
-      box-shadow: 0 2px 20px rgba(60,35,10,0.08), 0 1px 3px rgba(60,35,10,0.05);
-      transition: box-shadow 0.18s, border-color 0.18s, transform 0.18s;
-    }
+  .spec{border-top:1px solid var(--line);margin-bottom:12px;max-width:640px}
+  .spec div{display:flex;gap:16px;padding:2px 0;border-bottom:1px solid var(--line)}
+  .spec dt{flex:0 0 128px;font-size:10.5px;letter-spacing:0.08em;text-transform:uppercase;color:var(--ink-3);line-height:1.55}
+  .spec dd{flex:1;min-width:0;font-size:12.5px;color:var(--ink);line-height:1.55}
 
-    .post-card:hover {
-      box-shadow: 0 6px 36px rgba(60,35,10,0.14), 0 1px 4px rgba(60,35,10,0.07);
-      border-color: #E0D0BC;
-      transform: translateY(-2px);
-    }
+  .links{display:flex;flex-wrap:wrap;font-size:11.5px;gap:0 24px}
+  .links a{text-decoration:none;padding:4px 0;letter-spacing:0.01em;white-space:nowrap}
+  .links a:hover{text-decoration:underline}
 
-    .post-tag {
-      font-size: 0.65rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.12em;
-      color: #BF6030;
-      margin-bottom: 8px;
-    }
+  /* ── result tiles ── */
+  .tiles{display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+  .tile{display:block;text-decoration:none;color:inherit;padding:16px 18px 18px 0;border-right:1px solid var(--line)}
+  .tile:nth-child(2),.tile:nth-child(3){padding-left:18px}
+  .tile:last-child{border-right:0;padding-right:0}
+  .tile-num{font-size:1.7rem;font-weight:600;letter-spacing:-0.055em;line-height:1;margin-bottom:9px}
+  .tile:hover .tile-num{color:var(--link)}
+  .tile-label{font-size:12px;line-height:1.5;color:var(--ink-2)}
+  .tile-hw{display:block;margin-top:10px;font-size:10.5px;color:var(--ink-3);line-height:1.45}
+  .tile-go{display:block;margin-top:7px;font-size:10.5px;color:var(--link);letter-spacing:0.03em}
 
-    .post-title {
-      font-family: 'Fraunces', Georgia, serif;
-      font-size: 1.25rem;
-      font-weight: 600;
-      color: #160D04;
-      line-height: 1.3;
-      letter-spacing: -0.015em;
-      margin-bottom: 10px;
-    }
+  /* ── entry rows (work / experience / writing) ── */
+  .rows{border-top:1px solid var(--line)}
+  .row{display:block;padding:16px 0;border-bottom:1px solid var(--line);text-decoration:none;color:inherit}
+  a.row:hover .row-title{color:var(--link)}
+  .row-head{display:flex;justify-content:space-between;align-items:baseline;gap:14px;flex-wrap:wrap;margin-bottom:5px}
+  .row-title{font-size:14px;font-weight:600;letter-spacing:-0.03em;color:var(--ink)}
+  .row-when{font-size:10.5px;color:var(--ink-3);letter-spacing:0.05em;white-space:nowrap}
+  .row-desc{font-size:12.5px;line-height:1.55;color:var(--ink-2);max-width:78ch}
+  .row-links{margin-top:7px;font-size:11px;display:flex;flex-wrap:wrap;gap:0 18px}
+  .row-links a{text-decoration:none}
+  .row-links a:hover{text-decoration:underline}
+  .row-stats{margin-top:9px;font-size:11px;color:var(--ink-3);display:flex;flex-wrap:wrap;gap:4px 18px}
+  .row-stats b{color:var(--ink);font-weight:600}
 
-    .post-desc {
-      font-size: 0.875rem;
-      color: #7A5C3E;
-      line-height: 1.6;
-      margin-bottom: 16px;
-    }
+  .row-lead{border-left:2px solid var(--ink);padding-left:16px}
 
-    .post-meta {
-      font-size: 0.75rem;
-      color: #B09878;
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
+  /* ── notes ── */
+  .notes{border-top:1px solid var(--line)}
+  .note{display:flex;align-items:baseline;gap:14px;padding:9px 0;border-bottom:1px solid var(--line);text-decoration:none;color:inherit}
+  .note:hover .note-title{color:var(--link)}
+  .note-title{font-size:12.5px;font-weight:500;flex:1;min-width:0}
+  .note-sub{font-size:10.5px;color:var(--ink-3);white-space:nowrap}
+  .note-badge{font-size:9.5px;letter-spacing:0.1em;color:var(--ink-3);border:1px solid var(--line-2);padding:1px 6px;flex-shrink:0}
+  .notes-tagline{font-size:11.5px;color:var(--ink-3);margin-bottom:14px;line-height:1.55}
 
-    .post-meta-dot {
-      width: 3px;
-      height: 3px;
-      background: #C4A882;
-      border-radius: 50%;
-      display: inline-block;
-    }
+  footer{margin-top:20px;padding-top:12px;border-top:1px solid var(--line);font-size:10.5px;letter-spacing:0.08em;text-transform:uppercase;color:var(--ink-3)}
 
-    .read-link {
-      font-size: 0.78rem;
-      font-weight: 600;
-      color: #BF6030;
-      display: inline-flex;
-      align-items: center;
-      gap: 4px;
-    }
-
-    /* ── Notes tagline ── */
-    .notes-tagline {
-      font-size: 0.875rem;
-      color: #7A5C3E;
-      margin-bottom: 20px;
-    }
-
-    .notes-tagline a {
-      color: #BF6030;
-      text-decoration: none;
-      font-weight: 500;
-    }
-
-    .notes-tagline a:hover {
-      text-decoration: underline;
-    }
-
-    /* ── Notes list (style 3) ── */
-    .notes-list {
-      display: flex;
-      flex-direction: column;
-    }
-
-    .note-row {
-      display: flex;
-      align-items: center;
-      gap: 14px;
-      text-decoration: none;
-      color: inherit;
-      padding: 13px 0;
-      border-bottom: 1px solid #DDD0BC;
-      transition: padding-left 0.15s;
-    }
-
-    .note-row:first-child { border-top: 1px solid #DDD0BC; }
-
-    .note-row:hover { padding-left: 8px; }
-    .note-row:hover .note-title { color: #BF6030; }
-
-    .note-icon {
-      width: 32px;
-      height: 32px;
-      background: #F0E8DC;
-      border-radius: 8px;
-      flex-shrink: 0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: #BF6030;
-    }
-
-    .note-body { flex: 1; min-width: 0; }
-
-    .note-title {
-      font-family: 'Fraunces', Georgia, serif;
-      font-size: 0.975rem;
-      font-weight: 600;
-      color: #160D04;
-      letter-spacing: -0.01em;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      transition: color 0.15s;
-    }
-
-    .note-sub {
-      font-size: 0.7rem;
-      color: #7A5C3E;
-      margin-top: 1px;
-    }
-
-    .note-badge {
-      font-size: 0.6rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.1em;
-      color: #BF6030;
-      background: #F5EBE0;
-      border-radius: 4px;
-      padding: 2px 7px;
-      flex-shrink: 0;
-    }
-
-    /* ── Footer ── */
-    footer {
-      margin-top: 80px;
-      font-size: 0.78rem;
-      color: #C4A882;
-    }
-
-    @media (max-width: 560px) {
-      .container { padding: 48px 20px 80px; }
-      .post-card  { padding: 22px 22px; }
-    }
-  </style>
+  @media (max-width:760px){
+    .tiles{grid-template-columns:1fr}
+    .tile{border-right:0;border-bottom:1px solid var(--line);padding:16px 0 18px!important}
+    .tile:last-child{border-bottom:0}
+  }
+  @media (max-width:560px){
+    .wrap{padding:30px 16px 64px}
+    .spec dt{flex:0 0 100px;font-size:10px}
+    .head{font-size:10px;letter-spacing:0.05em}
+    .links{gap:0 18px}
+    .note-sub{display:none}
+  }
+  @media (prefers-reduced-motion:reduce){
+    *,*::before,*::after{transition:none!important;animation:none!important;scroll-behavior:auto!important}
+  }
+</style>
 </head>
 <body>
-
-<div class="container">
+<div class="wrap">
 
   <header>
-    <h1 class="name">Vraj Patel</h1>
-    <p class="tagline">CS student building things from scratch and writing about how they actually work.</p>
-    <div class="social-row">
-      <a href="https://github.com/VrajPatel105" target="_blank" rel="noopener" class="social-link">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.477 2 2 6.477 2 12c0 4.418 2.865 8.166 6.839 9.489.5.092.682-.217.682-.482 0-.237-.009-.868-.013-1.703-2.782.604-3.369-1.34-3.369-1.34-.454-1.156-1.11-1.463-1.11-1.463-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.578 9.578 0 0 1 12 6.836a9.59 9.59 0 0 1 2.504.337c1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.203 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.741 0 .267.18.578.688.48C19.138 20.163 22 16.418 22 12c0-5.523-4.477-10-10-10z"/></svg>
-        GitHub
-      </a>
-      <a href="https://www.linkedin.com/in/vrajpatel105/" target="_blank" rel="noopener" class="social-link">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 0 1-2.063-2.065 2.064 2.064 0 1 1 2.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
-        LinkedIn
-      </a>
-    </div>
+    <h1>Vraj Patel</h1>
+    <p class="positioning">I build GPU inference systems from scratch — CUDA and Triton kernels, FlashAttention-2 forward and backward, INT8 post-training quantization — and benchmark each one against the production baseline it's meant to replace.</p>
+    <dl class="spec">
+      <div><dt>School</dt><dd>CS, UMass Dartmouth</dd></div>
+      <div><dt>Graduating</dt><dd>May 2027</dd></div>
+      <div><dt>Seeking</dt><dd>ML systems / inference / ML infrastructure roles, starting May 2027</dd></div>
+    </dl>
+    <nav class="links" aria-label="Contact and profiles">
+      <a href="https://github.com/VrajPatel105" target="_blank" rel="noopener">github.com/VrajPatel105</a>
+      <a href="https://www.linkedin.com/in/vrajpatel105/" target="_blank" rel="noopener">linkedin.com/in/vrajpatel105</a>
+      <a href="mailto:vrajp1052005@gmail.com">vrajp1052005@gmail.com</a>
+      <a href="resume.pdf" target="_blank" rel="noopener">resume.pdf</a>
+    </nav>
   </header>
 
-  <div class="section-label">Writing</div>
+  <div class="head"><span><b>01</b> &nbsp;Selected results</span><span class="tt-none">Each traceable to a folder in the repo</span></div>
 
-  <div class="post-list">
-    <a href="transformer-trace/index.html" class="post-card">
-      <div class="post-tag">Machine Learning &nbsp;·&nbsp; Shape Trace</div>
-      <div class="post-title">I Built a Transformer From Scratch. Here's the Shape Trace Nobody Shows You.</div>
-      <p class="post-desc">A full forward pass through a real encoder-decoder Transformer, traced at the tensor level. Every reshape, matmul, and softmax, with actual numbers at each step.</p>
-      <div class="post-meta">
-        <span>April 2026</span>
-        <span class="post-meta-dot"></span>
-        <span>Encoder + Decoder</span>
-        <span class="post-meta-dot"></span>
-        <span class="read-link">Read →</span>
-      </div>
+  <div class="tiles">
+    <a class="tile" href="gpu-inference/index.html">
+      <div class="tile-num">~288 MB</div>
+      <div class="tile-label">peak at seq_len 8192 — matches SDPA, confirming O(N) scaling. FlashAttention-2 forward <em>and</em> backward from scratch in Triton, wrapped in a custom <code>torch.autograd.Function</code>. SDPA is still faster at long sequences because it skips masked blocks via causal block-skipping, which I haven't implemented yet.</div>
+      <span class="tile-hw">RTX 5080 Laptop · 16 GB · CUDA 12.9 · causal, fp16</span>
+      <span class="tile-go">Read the writeup →</span>
+    </a>
+    <a class="tile" href="https://github.com/VrajPatel105/cpp-gpu-inference/tree/main/quantization" target="_blank" rel="noopener">
+      <div class="tile-num">46.4%</div>
+      <div class="tile-label">static memory reduction from that quantizer, against bitsandbytes' 29.3% on the same model — with 15/15 identical translations and perplexity within 0.02%.</div>
+      <span class="tile-hw">RTX 5080 Laptop · 16 GB · CUDA 12.9</span>
+      <span class="tile-go">quantization →</span>
+    </a>
+    <a class="tile" href="https://github.com/VrajPatel105/cpp-gpu-inference/tree/main/triton-kernels" target="_blank" rel="noopener">
+      <div class="tile-num">60.3%</div>
+      <div class="tile-label">of FP32 peak at 2048 from a hand-written Triton tiled matmul — within ~20% of <span class="tt-none">cuBLAS</span> in true FP32 across 512–4096, and ahead at 512.</div>
+      <span class="tile-hw">RTX 5080 Laptop · TF32 disabled on both sides</span>
+      <span class="tile-go">triton-kernels →</span>
     </a>
   </div>
 
-  <div class="section-label" style="margin-top: 64px;">Notes</div>
-  <p class="notes-tagline">Study notes I've written while learning — find them all at <a href="https://vrajpatel105.github.io" target="_blank" rel="noopener">vrajpatel105.github.io</a></p>
+  <div class="head"><span><b>02</b> &nbsp;Work</span><span class="tt-none">Built from first principles</span></div>
 
-  <div class="notes-list">
+  <div class="rows">
 
-    <a href="notes/ann.pdf" target="_blank" rel="noopener" class="note-row">
-      <div class="note-icon">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14,2 14,8 20,8"/></svg>
+    <div class="row row-lead">
+      <div class="row-head">
+        <span class="row-title">cpp-gpu-inference — an end-to-end GPU inference stack</span>
       </div>
-      <div class="note-body">
-        <div class="note-title">Artificial Neural Networks</div>
-        <div class="note-sub">Deep Learning · Foundations</div>
+      <p class="row-desc">CUDA and Triton kernels, FlashAttention-2 forward and backward written from scratch and wrapped in a custom <code>torch.autograd.Function</code>, and an LLM.int8()-style INT8 post-training quantizer — each one benchmarked against the production library it replaces (cuBLAS, PyTorch SDPA, bitsandbytes) rather than against itself. Profiled with Nsight Compute to confirm the intended mechanism actually fired at hardware level, not just that the wall clock moved.</p>
+      <div class="row-stats">
+        <span><b>46.4%</b> static memory cut vs bitsandbytes' 29.3%</span>
+        <span><b>60.3%</b> of FP32 peak, Triton matmul at 2048</span>
+        <span><b>43.13% → 3.36%</b> L1TEX coalescing gap closed by tiling</span>
       </div>
-      <div class="note-badge">PDF</div>
+      <div class="row-links">
+        <a href="gpu-inference/index.html">Read the full writeup →</a>
+        <a href="https://github.com/VrajPatel105/cpp-gpu-inference" target="_blank" rel="noopener">Repository →</a>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="row-head">
+        <span class="row-title">en-de-transformer — encoder-decoder from scratch in PyTorch</span>
+      </div>
+      <p class="row-desc">6 encoder and 6 decoder blocks, 8 attention heads, d_model 512, trained on 200K Tatoeba English–German pairs. This is the substrate the FlashAttention-2 kernel and the INT8 quantizer were integrated into and measured on — a real model rather than a synthetic benchmark harness.</p>
+      <div class="row-links">
+        <a href="https://github.com/VrajPatel105/cpp-gpu-inference/tree/main/en-de-transformer" target="_blank" rel="noopener">Repository →</a>
+        <a href="transformer-trace/index.html">Shape trace writeup →</a>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="row-head">
+        <span class="row-title">CMVS — simulated autonomous UUV for sonar mine detection</span>
+        <span class="row-when">2025</span>
+      </div>
+      <p class="row-desc">Blue Tech Externship with Courage Builder. Simulated autonomous underwater vehicle for sonar-based mine detection. First place, 2025 cohort.</p>
+    </div>
+
+  </div>
+
+  <div class="head"><span><b>03</b> &nbsp;Experience</span></div>
+
+  <div class="rows">
+
+    <div class="row">
+      <div class="row-head">
+        <span class="row-title">ML Engineer Intern — Fleet Robotics</span>
+        <span class="row-when">Summer 2026</span>
+      </div>
+      <p class="row-desc">Diagnosed and corrected a simulation-to-reality heading-drift discrepancy in a MuJoCo robotics RL policy, validated against real robot runs. Retrained a SAC policy on an existing production policy. Built AWS and Snowflake data pipelines and Streamlit dashboards turning raw robot telemetry into engineering insight. Worked inside a large production codebase and presented findings to both technical and non-technical stakeholders.</p>
+    </div>
+
+    <div class="row">
+      <div class="row-head">
+        <span class="row-title">Research Software Engineering Intern — SMAST</span>
+        <span class="row-when">Sept–Nov 2025</span>
+      </div>
+      <p class="row-desc">Refactored an R codebase for a NOAA-funded offshore-wind and fishery-survey project. Implemented parallel processing for a 2x speedup on spatial simulations, and packaged an R helper library for reuse across the group.</p>
+    </div>
+
+    <div class="row">
+      <div class="row-head">
+        <span class="row-title">Data Science Intern — SMAST</span>
+        <span class="row-when">May–Aug 2025</span>
+      </div>
+      <p class="row-desc">Automated analysis of 38 years of estuary data across 7 sites. Built PowerQuery ETL pipelines that cut report turnaround from three weeks to ten minutes.</p>
+    </div>
+
+  </div>
+
+  <div class="head"><span><b>04</b> &nbsp;Writing</span></div>
+
+  <div class="rows">
+
+    <a class="row" href="gpu-inference/index.html">
+      <div class="row-head">
+        <span class="row-title">Building a GPU inference stack from scratch, and measuring it honestly</span>
+        <span class="row-when">August 2026</span>
+      </div>
+      <p class="row-desc">FlashAttention-2 in Triton, INT8 post-training quantization, a tiled matmul against <span class="tt-none">cuBLAS</span>, and CUDA fundamentals profiled with Nsight Compute. Full tables, the hardware each number came from, and the places the from-scratch version loses to the production baseline.</p>
+      <div class="row-links"><span>Read →</span></div>
     </a>
 
-    <a href="notes/optimizing-nn.pdf" target="_blank" rel="noopener" class="note-row">
-      <div class="note-icon">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14,2 14,8 20,8"/></svg>
+    <a class="row" href="transformer-trace/index.html">
+      <div class="row-head">
+        <span class="row-title">I Built a Transformer From Scratch. Here's the Shape Trace Nobody Shows You.</span>
+        <span class="row-when">April 2026</span>
       </div>
-      <div class="note-body">
-        <div class="note-title">Optimizing Neural Networks</div>
-        <div class="note-sub">Deep Learning · Optimization</div>
-      </div>
-      <div class="note-badge">PDF</div>
-    </a>
-
-    <a href="notes/cnn.pdf" target="_blank" rel="noopener" class="note-row">
-      <div class="note-icon">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14,2 14,8 20,8"/></svg>
-      </div>
-      <div class="note-body">
-        <div class="note-title">Deep Learning for Computer Vision</div>
-        <div class="note-sub">Computer Vision · CNN</div>
-      </div>
-      <div class="note-badge">PDF</div>
-    </a>
-
-    <a href="notes/rnn.pdf" target="_blank" rel="noopener" class="note-row">
-      <div class="note-icon">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14,2 14,8 20,8"/></svg>
-      </div>
-      <div class="note-body">
-        <div class="note-title">Recurrent Neural Networks</div>
-        <div class="note-sub">Sequence Models · RNN</div>
-      </div>
-      <div class="note-badge">PDF</div>
-    </a>
-
-    <a href="notes/encoder-decoder.pdf" target="_blank" rel="noopener" class="note-row">
-      <div class="note-icon">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14,2 14,8 20,8"/></svg>
-      </div>
-      <div class="note-body">
-        <div class="note-title">Encoder–Decoder Mechanism</div>
-        <div class="note-sub">Transformers · Architecture</div>
-      </div>
-      <div class="note-badge">PDF</div>
-    </a>
-
-    <a href="notes/transformer.pdf" target="_blank" rel="noopener" class="note-row">
-      <div class="note-icon">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14,2 14,8 20,8"/></svg>
-      </div>
-      <div class="note-body">
-        <div class="note-title">Transformer Architecture</div>
-        <div class="note-sub">Transformers · Full Architecture</div>
-      </div>
-      <div class="note-badge">PDF</div>
+      <p class="row-desc">A full forward pass through a real encoder-decoder Transformer, traced at the tensor level. Every reshape, matmul, and softmax, with actual numbers at each step.</p>
+      <div class="row-links"><span>Read →</span></div>
     </a>
 
   </div>
 
-  <footer>
-    Built with plain HTML. Hosted on GitHub Pages.
-  </footer>
+  <div class="head"><span><b>05</b> &nbsp;Notes</span><span class="tt-none">Study notes written while learning</span></div>
+
+  <p class="notes-tagline">Notes I've written while working through this material.</p>
+
+  <div class="notes">
+    <a class="note" href="notes/ann.pdf" target="_blank" rel="noopener">
+      <span class="note-title">Artificial Neural Networks</span>
+      <span class="note-sub">Deep Learning · Foundations</span>
+      <span class="note-badge">PDF</span>
+    </a>
+    <a class="note" href="notes/optimizing-nn.pdf" target="_blank" rel="noopener">
+      <span class="note-title">Optimizing Neural Networks</span>
+      <span class="note-sub">Deep Learning · Optimization</span>
+      <span class="note-badge">PDF</span>
+    </a>
+    <a class="note" href="notes/cnn.pdf" target="_blank" rel="noopener">
+      <span class="note-title">Deep Learning for Computer Vision</span>
+      <span class="note-sub">Computer Vision · CNN</span>
+      <span class="note-badge">PDF</span>
+    </a>
+    <a class="note" href="notes/rnn.pdf" target="_blank" rel="noopener">
+      <span class="note-title">Recurrent Neural Networks</span>
+      <span class="note-sub">Sequence Models · RNN</span>
+      <span class="note-badge">PDF</span>
+    </a>
+    <a class="note" href="notes/encoder-decoder.pdf" target="_blank" rel="noopener">
+      <span class="note-title">Encoder–Decoder Mechanism</span>
+      <span class="note-sub">Transformers · Architecture</span>
+      <span class="note-badge">PDF</span>
+    </a>
+    <a class="note" href="notes/transformer.pdf" target="_blank" rel="noopener">
+      <span class="note-title">Transformer Architecture</span>
+      <span class="note-sub">Transformers · Full Architecture</span>
+      <span class="note-badge">PDF</span>
+    </a>
+  </div>
+
+  <footer>Built with plain HTML. Hosted on GitHub Pages.</footer>
 
 </div>
-
 </body>
 </html>

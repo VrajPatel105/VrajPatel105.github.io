@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Building a GPU inference stack from scratch — Vraj Patel</title>
+
+<meta name="description" content="FlashAttention-2 in Triton, INT8 post-training quantization, a tiled matmul against cuBLAS, and CUDA fundamentals profiled with Nsight Compute. Full tables, stated hardware, and the places the from-scratch version loses.">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Building a GPU inference stack from scratch, and measuring it honestly">
+<meta property="og:description" content="FlashAttention-2 forward and backward in Triton, custom INT8 quantization that beats bitsandbytes on static memory, and a tiled matmul within ~20% of cuBLAS in true FP32.">
+<meta property="og:url" content="https://vrajpatel105.github.io/gpu-inference/">
+<meta name="twitter:card" content="summary">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+<style>
+  :root{
+    --canvas:#fafaf9;
+    --ink:#16181a;
+    --ink-2:#494c4f;
+    --ink-3:#7b7e81;
+    --line:#e2e1de;
+    --line-2:#cfcecb;
+    --fill:#eeedea;
+
+    /* two data roles, used consistently across every chart and table */
+    --mine:#16181a;
+    --theirs:#c2c1bd;
+
+    --link:#3d3a8c;
+    --mono:'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  html{-webkit-text-size-adjust:100%}
+
+  body{
+    background:var(--canvas);
+    color:var(--ink);
+    font-family:var(--mono);
+    font-size:13px;
+    line-height:1.5;
+    letter-spacing:-0.02em;
+    font-feature-settings:'tnum' 1,'zero' 1;
+    -webkit-font-smoothing:antialiased;
+  }
+
+  .wrap{max-width:940px;margin:0 auto;padding:36px 24px 90px}
+
+  a{color:var(--link)}
+  a:focus-visible{outline:2px solid var(--link);outline-offset:3px;border-radius:2px}
+  code{font-family:inherit;font-size:1em;background:var(--fill);padding:0 4px}
+
+  .back{font-size:11px;text-decoration:none;display:inline-block;margin-bottom:26px}
+  .back:hover{text-decoration:underline}
+
+  h1{font-size:1.55rem;font-weight:600;letter-spacing:-0.045em;line-height:1.18;margin-bottom:14px;max-width:32ch}
+  .standfirst{font-size:13.5px;line-height:1.6;color:var(--ink-2);max-width:74ch;margin-bottom:18px}
+  .byline{font-size:10.5px;letter-spacing:0.08em;text-transform:uppercase;color:var(--ink-3);padding-bottom:14px;border-bottom:1px solid var(--ink)}
+
+  .head{
+    display:flex;justify-content:space-between;align-items:baseline;gap:14px;
+    font-size:10.5px;letter-spacing:0.08em;text-transform:uppercase;
+    color:var(--ink-3);padding:10px 0;border-bottom:1px solid var(--ink);
+    margin:48px 0 20px;
+  }
+  .head b{color:var(--ink);font-weight:600}
+  .tt-none{text-transform:none;letter-spacing:-0.01em}
+
+  h3{font-size:13.5px;font-weight:600;letter-spacing:-0.03em;margin:28px 0 10px}
+
+  /* ── prose: mono, set for reading ── */
+  p.t{font-size:13.5px;line-height:1.75;letter-spacing:-0.015em;color:var(--ink-2);max-width:66ch;margin-bottom:15px}
+  p.t b{color:var(--ink);font-weight:600}
+  ul.t{max-width:66ch;margin:0 0 15px 0;list-style:none}
+  ul.t li{font-size:13.5px;line-height:1.7;letter-spacing:-0.015em;color:var(--ink-2);padding-left:18px;position:relative;margin-bottom:9px}
+  ul.t li::before{content:'—';position:absolute;left:0;color:var(--ink-3)}
+  ul.t li b{color:var(--ink);font-weight:600}
+
+  /* ── callout for the correction notice ── */
+  .flag{border:1px solid var(--ink);padding:16px 18px;max-width:74ch;margin-bottom:18px}
+  .flag .flag-h{font-size:10.5px;letter-spacing:0.1em;text-transform:uppercase;color:var(--ink);font-weight:600;margin-bottom:8px}
+  .flag p{font-size:12.5px;line-height:1.65;color:var(--ink-2);margin-bottom:9px}
+  .flag p:last-child{margin-bottom:0}
+  .flag code{background:var(--canvas)}
+
+  /* ── spec block ── */
+  .spec{border-top:1px solid var(--line);margin-bottom:20px;max-width:680px}
+  .spec div{display:flex;gap:16px;padding:6px 0;border-bottom:1px solid var(--line)}
+  .spec dt{flex:0 0 150px;font-size:10.5px;letter-spacing:0.06em;text-transform:uppercase;color:var(--ink-3);padding-top:2px}
+  .spec dd{flex:1;min-width:0;font-size:12.5px;color:var(--ink)}
+
+  /* ── tables ── */
+  .table-wrap{margin-bottom:8px}
+  /* Self-detecting scroll shadows: the two `local` layers scroll with the
+     content and mask the two `scroll` layers, so an edge shadow appears only
+     when there is actually more table in that direction. No always-on fade
+     sitting over the last column. */
+  .table-scroll{
+    overflow-x:auto;-webkit-overflow-scrolling:touch;
+    background:
+      linear-gradient(to right,var(--canvas) 30%,rgba(250,250,249,0)) left center/28px 100% no-repeat local,
+      linear-gradient(to left,var(--canvas) 30%,rgba(250,250,249,0)) right center/28px 100% no-repeat local,
+      radial-gradient(farthest-side at 0 50%,rgba(22,24,26,.16),rgba(22,24,26,0)) left center/12px 100% no-repeat scroll,
+      radial-gradient(farthest-side at 100% 50%,rgba(22,24,26,.16),rgba(22,24,26,0)) right center/12px 100% no-repeat scroll;
+  }
+  table{border-collapse:collapse;width:100%;font-size:12px;background:transparent}
+  caption{text-align:left;font-size:10.5px;color:var(--ink-3);padding-bottom:9px;line-height:1.5;max-width:70ch}
+  th,td{padding:6px 16px;text-align:right;white-space:nowrap}
+  th:first-child,td:first-child{text-align:left;padding-left:0}
+  th:last-child,td:last-child{padding-right:20px}
+  thead th{
+    font-size:10.5px;font-weight:500;letter-spacing:0.02em;
+    color:var(--ink-3);border-bottom:1px solid var(--ink);padding-bottom:7px;
+  }
+  tbody tr{border-bottom:1px solid var(--line)}
+  tbody th{font-weight:500}
+  .c-mine{color:var(--ink);font-weight:600}
+  .c-theirs{color:var(--ink-3)}
+  .pk{display:none}
+  .scroll-hint{font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:var(--ink-3);margin-bottom:20px}
+
+  /* ── legend ── */
+  .legend{display:flex;gap:18px;flex-wrap:wrap;font-size:11px;letter-spacing:0.01em;color:var(--ink-2);margin-bottom:14px}
+  .legend i{display:inline-block;width:18px;height:9px;margin-right:7px;vertical-align:0}
+  .sw-mine{background:var(--mine)}
+  .sw-theirs{background:var(--theirs);outline:1px solid var(--line-2);outline-offset:-1px}
+  .sw-ref{background:transparent;outline:1px solid var(--ink);outline-offset:-1px}
+
+  /* ── figures ── */
+  figure{margin:0 0 26px}
+  figcaption{font-size:11.5px;line-height:1.6;color:var(--ink-2);margin-top:11px;padding-top:9px;border-top:1px solid var(--line);max-width:80ch}
+  figcaption b{color:var(--ink);font-weight:600}
+  figcaption span.m{color:var(--ink-3)}
+  .chart{display:block;width:100%;height:auto}
+  .shot{display:block;width:100%;height:auto;border:1px solid var(--line-2);background:#1e1e1e}
+
+  footer{margin-top:44px;padding-top:12px;border-top:1px solid var(--line);font-size:10.5px;letter-spacing:0.08em;text-transform:uppercase;color:var(--ink-3)}
+
+  @media (max-width:640px){
+    .wrap{padding:26px 16px 64px}
+    .spec dt{flex:0 0 112px;font-size:10px}
+    .head{font-size:10px;letter-spacing:0.05em}
+    /* collapse % peak into the TFLOP/s cell so nothing clips on a phone */
+    .col-pk{display:none}
+    .pk{display:block;font-size:10px;color:var(--ink-3);font-weight:400;letter-spacing:0}
+  }
+  @media (prefers-reduced-motion:reduce){
+    *,*::before,*::after{transition:none!important;animation:none!important;scroll-behavior:auto!important}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <a class="back" href="../index.html">← Vraj Patel</a>
+
+  <h1>Building a GPU inference stack from scratch, and measuring it honestly</h1>
+  <p class="standfirst">FlashAttention-2 forward and backward in Triton, an LLM.int8()-style INT8 post-training quantizer, a tiled matmul against cuBLAS, and CUDA fundamentals profiled with Nsight Compute. Every number here has the hardware it was measured on stated next to it, and the sections where my implementation loses to the production baseline are the ones I've written out in the most detail.</p>
+  <div class="byline">Vraj Patel · August 2026 · <a href="https://github.com/VrajPatel105/cpp-gpu-inference" target="_blank" rel="noopener" class="tt-none">github.com/VrajPatel105/cpp-gpu-inference</a></div>
+
+  <div class="head"><span><b>01</b> &nbsp;What this is</span></div>
+
+  <p class="t">This is an end-to-end GPU inference stack built from first principles: the CUDA fundamentals underneath it, the Triton kernels on top of those, an attention implementation that replaces PyTorch's, and a quantizer that replaces bitsandbytes'. I wrote each piece from scratch rather than importing it because importing it teaches you the API and nothing else. Writing the FlashAttention-2 backward pass by hand is what forces you to understand why the algorithm keeps the log-sum-exp statistic around instead of the full attention matrix.</p>
+
+  <p class="t">The rule I set for myself was that every component gets benchmarked against the production library it is meant to replace — cuBLAS, PyTorch SDPA, bitsandbytes — rather than against a naive version of itself. Benchmarking against your own first draft is how you generate impressive-looking numbers that mean nothing. Two of the four sections below end with my implementation losing, and those are the interesting ones.</p>
+
+  <p class="t">One correction up front, because it affects the headline number and I would rather you hear it from me than find it in the source. The FlashAttention-2 benchmark as originally written counted FLOPs asymmetrically between my kernel and the baseline, which inflated my throughput by exactly 2×. Section 02 explains the mistake and reports the corrected comparison. The matmul, quantization, and CUDA sections are unaffected.</p>
+
+  <h3>Environment</h3>
+  <dl class="spec">
+    <div><dt>Triton, FA-2, quant</dt><dd>NVIDIA RTX 5080 Laptop, 16 GB VRAM, CUDA 12.9, driver 577.03, WSL2 on Windows</dd></div>
+    <div><dt>PMPP CUDA study</dt><dd>NVIDIA RTX 4070 Laptop, sm_89, 36 SMs, compiled <code>nvcc -O3 -arch=sm_89</code></dd></div>
+    <div><dt>PyTorch</dt><dd>2.12.0</dd></div>
+    <div><dt>Model under test</dt><dd>Encoder-decoder transformer, 6 blocks each, 8 heads, d_model 512, 200K Tatoeba EN–DE pairs</dd></div>
+  </dl>
+  <p class="t"><span class="m" style="color:var(--ink-3);font-size:11.5px">The two GPUs are never mixed. Every table below states which card it ran on.</span></p>
+
+  <div class="head"><span><b>02</b> &nbsp;FlashAttention-2 in Triton</span><span class="tt-none">RTX 5080 Laptop</span></div>
+
+  <p class="t">Forward and backward, written from scratch in Triton and wrapped in a custom <code>torch.autograd.Function</code> so it drops into a real transformer as its attention mechanism. The forward kernel tiles Q against blocks of K and V, maintaining a running maximum and a running sum for the online softmax — each new block rescales the accumulator by <code>exp(m_old - m_new)</code> rather than materialising the full <code>seq_len × seq_len</code> attention matrix. Causal masking is applied inside the kernel at line level, combined with the padding mask, before the softmax. Inputs are fp16 with fp32 accumulation in the <code>tl.dot</code> calls.</p>
+
+  <p class="t">The backward is the part worth writing by hand. It recomputes the attention probabilities from the saved log-sum-exp statistic instead of storing them, which is the whole memory argument for FlashAttention, and it splits into three kernels: a preprocessing pass computing the row-wise <code>D</code> term, a dK/dV kernel, and a dQ kernel.</p>
+
+  <h3>Correctness</h3>
+  <p class="t">Each kernel was checked against a reference PyTorch implementation on identical inputs, with <code>torch.allclose</code> at <code>atol=1e-2, rtol=1e-2</code>. All passed.</p>
+
+  <div class="table-wrap">
+    <div class="table-scroll">
+      <table>
+        <caption>Absolute difference against the PyTorch reference · fp16 · batch 2, 4 heads, seq_len 512, head_dim 64</caption>
+        <thead>
+          <tr><th scope="col">Tensor</th><th scope="col">Max abs diff</th><th scope="col">Mean abs diff</th><th scope="col">allclose</th></tr>
+        </thead>
+        <tbody>
+          <tr><th scope="row">Forward output</th><td>0.00048828</td><td>0.00017583</td><td>pass</td></tr>
+          <tr><th scope="row">Preprocess (D)</th><td>0.02055931</td><td>0.00455718</td><td>pass</td></tr>
+          <tr><th scope="row">dK</th><td>0.00317383</td><td>0.00035345</td><td>pass</td></tr>
+          <tr><th scope="row">dV</th><td>0.00390625</td><td>0.00018393</td><td>pass</td></tr>
+          <tr><th scope="row">dQ</th><td>0.00229645</td><td>0.00042145</td><td>pass</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <h3>Memory: the result I can stand behind</h3>
+
+  <p class="t">The baseline is <code>torch.nn.functional.scaled_dot_product_attention(Q, K, V, is_causal=True)</code> with the backend left unpinned, so PyTorch selects its own — in practice its fused flash kernel. That is the right thing to compare against: it is what someone would actually use instead of my kernel.</p>
+
+  <p class="t">Peak allocated memory tracks SDPA almost exactly across the whole range, and grows mildly with sequence length rather than quadratically. That is the central claim of FlashAttention, and it is the one my implementation demonstrably reproduces: <b>258.0 MB at seq_len 512, and 288.0 MB at seq_len 8192</b>. Never materialising the <code>seq_len × seq_len</code> attention matrix is what buys that.</p>
+
+  <div class="legend">
+    <span><i class="sw-mine"></i>Triton FA-2 — mine</span>
+    <span><i class="sw-theirs"></i>PyTorch SDPA — baseline</span>
+  </div>
+
+  <div class="table-wrap">
+    <div class="table-scroll">
+      <table>
+        <caption>Peak allocated memory, forward pass, causal, fp16 · batch 2, 4 heads, head_dim 64 · RTX 5080 Laptop</caption>
+        <thead>
+          <tr>
+            <th scope="col">seq_len</th>
+            <th scope="col">Triton peak MB</th>
+            <th scope="col">SDPA peak MB</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><th scope="row">512</th><td class="c-mine">258.0</td><td class="c-theirs">258.0</td></tr>
+          <tr><th scope="row">1024</th><td class="c-mine">260.0</td><td class="c-theirs">260.0</td></tr>
+          <tr><th scope="row">2048</th><td class="c-mine">264.0</td><td class="c-theirs">264.1</td></tr>
+          <tr><th scope="row">4096</th><td class="c-mine">272.0</td><td class="c-theirs">272.1</td></tr>
+          <tr><th scope="row">8192</th><td class="c-mine">288.0</td><td class="c-theirs">288.3</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <figure>
+    <svg class="chart" viewBox="0 0 720 300" role="img" aria-label="Grouped bar chart of peak allocated memory for Triton FlashAttention-2 versus PyTorch SDPA at sequence lengths 512 through 8192. Triton uses 258.0, 260.0, 264.0, 272.0 and 288.0 megabytes; SDPA uses 258.0, 260.0, 264.1, 272.1 and 288.3. The two are near-identical at every length, and a sixteen-fold increase in sequence length raises memory by only about 12 percent.">
+      <g font-family="'IBM Plex Mono', monospace" font-size="10" fill="#7b7e81">
+        <g stroke="#e2e1de" stroke-width="1">
+          <line x1="56" y1="240" x2="700" y2="240"/>
+          <line x1="56" y1="170" x2="700" y2="170"/>
+          <line x1="56" y1="100" x2="700" y2="100"/>
+          <line x1="56" y1="30"  x2="700" y2="30"/>
+        </g>
+        <text x="48" y="243.5" text-anchor="end">0</text>
+        <text x="48" y="173.5" text-anchor="end">100</text>
+        <text x="48" y="103.5" text-anchor="end">200</text>
+        <text x="48" y="33.5" text-anchor="end">300</text>
+        <text x="56" y="286" font-size="9" letter-spacing="1">SEQUENCE LENGTH</text>
+        <text x="700" y="286" font-size="9" letter-spacing="1" text-anchor="end">PEAK ALLOCATED MB</text>
+      </g>
+
+      <g>
+        <rect x="78.4"  y="59.4"  width="40" height="180.6" fill="#16181a"/>
+        <rect x="122.4" y="59.4"  width="40" height="180.6" fill="#c2c1bd"/>
+        <rect x="207.2" y="58.0"  width="40" height="182.0" fill="#16181a"/>
+        <rect x="251.2" y="58.0"  width="40" height="182.0" fill="#c2c1bd"/>
+        <rect x="336"   y="55.2"  width="40" height="184.8" fill="#16181a"/>
+        <rect x="380"   y="55.13" width="40" height="184.87" fill="#c2c1bd"/>
+        <rect x="464.8" y="49.6"  width="40" height="190.4" fill="#16181a"/>
+        <rect x="508.8" y="49.53" width="40" height="190.47" fill="#c2c1bd"/>
+        <rect x="593.6" y="38.4"  width="40" height="201.6" fill="#16181a"/>
+        <rect x="637.6" y="38.19" width="40" height="201.81" fill="#c2c1bd"/>
+      </g>
+
+      <g font-family="'IBM Plex Mono', monospace" font-size="9.5" text-anchor="middle">
+        <text x="98.4"  y="54" fill="#16181a" font-weight="600">258.0</text>
+        <text x="142.4" y="54" fill="#7b7e81">258.0</text>
+        <text x="227.2" y="52" fill="#16181a" font-weight="600">260.0</text>
+        <text x="271.2" y="52" fill="#7b7e81">260.0</text>
+        <text x="356"   y="50" fill="#16181a" font-weight="600">264.0</text>
+        <text x="400"   y="50" fill="#7b7e81">264.1</text>
+        <text x="484.8" y="44" fill="#16181a" font-weight="600">272.0</text>
+        <text x="528.8" y="44" fill="#7b7e81">272.1</text>
+        <text x="613.6" y="33" fill="#16181a" font-weight="600">288.0</text>
+        <text x="657.6" y="33" fill="#7b7e81">288.3</text>
+      </g>
+
+      <line x1="56" y1="240" x2="700" y2="240" stroke="#16181a" stroke-width="1"/>
+      <g font-family="'IBM Plex Mono', monospace" font-size="11" fill="#16181a" text-anchor="middle">
+        <text x="120.4" y="257">512</text>
+        <text x="249.2" y="257">1024</text>
+        <text x="378"   y="257">2048</text>
+        <text x="506.8" y="257">4096</text>
+        <text x="635.6" y="257">8192</text>
+      </g>
+    </svg>
+    <figcaption><b>Peak memory matches SDPA at every sequence length, and barely moves as the sequence grows.</b> 258.0 MB at seq_len 512 against 288.0 MB at seq_len 8192. A naive attention implementation materialising the score matrix would grow quadratically over the same range. This is the property FlashAttention exists to deliver, and my kernel reproduces it.</figcaption>
+  </figure>
+
+  <h3>Where it loses, and why</h3>
+
+  <p class="t"><b>SDPA is faster than my kernel at long sequence lengths.</b> The reason is that my inner loop visits every K/V block and masks the ones above the diagonal, so at long sequence lengths roughly half the work I perform is computed and then discarded. SDPA's flash backend skips those blocks entirely — causal block-skipping — which I have not implemented. That is the single largest gap between my kernel and a production one, and closing it is the next thing I would do.</p>
+
+  <div class="flag">
+    <div class="flag-h">Why there is no throughput table here</div>
+    <p>My benchmark harness computed throughput for the two sides with different formulas. My kernel was credited with <code>4·b·h·n²·d</code> FLOPs — the full, non-causal attention cost — while the baseline was credited with <code>2·b·h·n²·d</code>, the causal cost.</p>
+    <p>Both implementations compute <b>causal</b> attention; my kernel applies the causal mask unconditionally and has no toggle. Crediting one side at the full rate and the other at the causal rate makes the two columns non-comparable, so the throughput numbers that harness produced do not support a claim in either direction.</p>
+    <p>A second problem sat underneath it: the percent-of-peak column divided by a constant the baseline itself exceeded, reporting 128.1% of peak at seq_len 8192. Nothing can exceed peak, so that constant was not the right ceiling for the path the baseline takes.</p>
+    <p>Rather than publish a repaired number derived from the same run, I have removed the throughput comparison until I have re-measured it with symmetric accounting. The memory table above is unaffected — it was never a function of the FLOP count.</p>
+  </div>
+
+  <div class="head"><span><b>03</b> &nbsp;INT8 post-training quantization</span><span class="tt-none">RTX 5080 Laptop</span></div>
+
+  <p class="t">An LLM.int8()-style outlier-aware mixed-precision matmul, written from scratch and applied to the encoder-decoder transformer above. The approach: keep a small set of activation-derived outlier channels in full precision, quantize everything else to INT8.</p>
+
+  <h3>Calibration</h3>
+  <p class="t">A calibration pass over the trained model used forward hooks to track the running maximum activation magnitude per input channel across every <code>nn.Linear</code>. Outlier channels were selected with a <b>dynamic per-layer threshold</b> — mean plus three standard deviations of per-channel activation magnitude — rather than a fixed cutoff, because activation distributions varied meaningfully across layers. The result is a dict mapping dotted module names to outlier index tensors.</p>
+
+  <h3>QuantizedLinear</h3>
+  <p class="t"><code>QuantizedLinear</code> splits each weight matrix into a full-precision outlier column set and an INT8 column set quantized with a per-output-neuron scale. At inference it splits the incoming activation the same way, quantizes the normal columns dynamically with a per-token scale, runs two matmuls, dequantizes the INT8 path by the product of the activation and weight scales, then sums with the outlier path and the bias.</p>
+  <p class="t">Single-layer correctness: <b>mean absolute error 0.0038</b> against output magnitudes of roughly 0.1–0.5. That is consistent with INT8 rounding, not with an implementation bug — the distinction being that a bug produces errors that scale with the input or concentrate in particular channels, and this doesn't.</p>
+
+  <h3>Results</h3>
+
+  <div class="legend">
+    <span><i class="sw-ref"></i>Original — unquantized reference</span>
+    <span><i class="sw-mine"></i>Custom QuantizedLinear — mine</span>
+    <span><i class="sw-theirs"></i>bitsandbytes — baseline</span>
+  </div>
+
+  <div class="table-wrap">
+    <div class="table-scroll">
+      <table>
+        <caption>Perplexity, computed as the exponential of average cross-entropy over the held-out validation split · RTX 5080 Laptop</caption>
+        <thead><tr><th scope="col">Model</th><th scope="col">Perplexity</th></tr></thead>
+        <tbody>
+          <tr><th scope="row">Original</th><td>21.8669</td></tr>
+          <tr><th scope="row">Custom QuantizedLinear</th><td class="c-mine">21.8698</td></tr>
+          <tr><th scope="row">bitsandbytes <code>Linear8bitLt</code></th><td class="c-theirs">21.8653</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <p class="scroll-hint">All three within 0.02% of each other — no measurable degradation in predictive quality on this dataset.</p>
+
+  <div class="table-wrap">
+    <div class="table-scroll">
+      <table>
+        <caption>Memory. Static footprint is total bytes across all parameters and buffers; peak GPU memory is allocation during a single translation call · RTX 5080 Laptop</caption>
+        <thead><tr><th scope="col">Model</th><th scope="col">Static footprint</th><th scope="col">Peak GPU memory</th></tr></thead>
+        <tbody>
+          <tr><th scope="row">Original</th><td>430.52 MB</td><td>2534.08 MB</td></tr>
+          <tr><th scope="row">Custom QuantizedLinear</th><td class="c-mine">230.77 MB (−46.4%)</td><td class="c-mine">2397.27 MB (−5.4%)</td></tr>
+          <tr><th scope="row">bitsandbytes</th><td class="c-theirs">304.52 MB (−29.3%)</td><td class="c-theirs">2308.47 MB (−8.9%)</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <figure>
+    <svg class="chart" viewBox="0 0 720 330" role="img" aria-label="Two bar panels. Static footprint: Original 430.52 megabytes, custom implementation 230.77, bitsandbytes 304.52 — the custom implementation wins. Peak inference memory: Original 2534.08 megabytes, custom 2397.27, bitsandbytes 2308.47 — bitsandbytes wins. The result splits in two directions.">
+      <g font-family="'IBM Plex Mono', monospace" font-size="10" fill="#7b7e81">
+        <text x="56" y="26" font-size="10.5" fill="#16181a" font-weight="600">STATIC FOOTPRINT (MB)</text>
+        <text x="420" y="26" font-size="10.5" fill="#16181a" font-weight="600">PEAK GPU MEMORY (MB)</text>
+      </g>
+
+      <!-- panel A: static footprint, scale 0-450 -->
+      <g stroke="#e2e1de" stroke-width="1">
+        <line x1="56" y1="250" x2="350" y2="250"/>
+        <line x1="56" y1="180" x2="350" y2="180"/>
+        <line x1="56" y1="110" x2="350" y2="110"/>
+      </g>
+      <rect x="80"  y="49.1"  width="56" height="200.9" fill="none" stroke="#16181a" stroke-width="1.5"/>
+      <rect x="166" y="142.3" width="56" height="107.7" fill="#16181a"/>
+      <rect x="252" y="107.9" width="56" height="142.1" fill="#c2c1bd"/>
+      <g font-family="'IBM Plex Mono', monospace" font-size="10" text-anchor="middle">
+        <text x="108" y="43"  fill="#16181a">430.52</text>
+        <text x="194" y="136" fill="#16181a" font-weight="600">230.77</text>
+        <text x="280" y="102" fill="#5c5f61">304.52</text>
+        <text x="194" y="152" fill="#fafaf9" font-size="9" font-weight="600">−46.4%</text>
+        <text x="280" y="118" fill="#494c4f" font-size="9">−29.3%</text>
+      </g>
+      <line x1="56" y1="250" x2="350" y2="250" stroke="#16181a" stroke-width="1"/>
+      <g font-family="'IBM Plex Mono', monospace" font-size="9.5" fill="#16181a" text-anchor="middle">
+        <text x="108" y="266">Original</text>
+        <text x="194" y="266">Custom</text>
+        <text x="280" y="266">bnb</text>
+      </g>
+
+      <!-- panel B: peak memory, scale 0-2600 -->
+      <g stroke="#e2e1de" stroke-width="1">
+        <line x1="420" y1="250" x2="700" y2="250"/>
+        <line x1="420" y1="180" x2="700" y2="180"/>
+        <line x1="420" y1="110" x2="700" y2="110"/>
+      </g>
+      <rect x="440" y="45.3" width="56" height="204.7" fill="none" stroke="#16181a" stroke-width="1.5"/>
+      <rect x="526" y="56.4" width="56" height="193.6" fill="#16181a"/>
+      <rect x="612" y="63.5" width="56" height="186.5" fill="#c2c1bd"/>
+      <g font-family="'IBM Plex Mono', monospace" font-size="10" text-anchor="middle">
+        <text x="468" y="39" fill="#16181a">2534.1</text>
+        <text x="554" y="50" fill="#16181a" font-weight="600">2397.3</text>
+        <text x="640" y="57" fill="#5c5f61">2308.5</text>
+        <text x="554" y="66" fill="#fafaf9" font-size="9" font-weight="600">−5.4%</text>
+        <text x="640" y="79" fill="#494c4f" font-size="9">−8.9%</text>
+      </g>
+      <line x1="420" y1="250" x2="700" y2="250" stroke="#16181a" stroke-width="1"/>
+      <g font-family="'IBM Plex Mono', monospace" font-size="9.5" fill="#16181a" text-anchor="middle">
+        <text x="468" y="266">Original</text>
+        <text x="554" y="266">Custom</text>
+        <text x="640" y="266">bnb</text>
+      </g>
+
+      <g font-family="'IBM Plex Mono', monospace" font-size="9.5" fill="#7b7e81">
+        <text x="56" y="292">Lower is better. Panels use independent scales.</text>
+      </g>
+    </svg>
+    <figcaption><b>The result splits in two directions, and both halves are worth reporting.</b> My implementation wins static footprint by a wide margin (−46.4% vs −29.3%) because it quantizes the output projection layer that bitsandbytes was not applied to. bitsandbytes wins peak inference memory (−8.9% vs −5.4%), which most likely reflects more mature temporary-allocation handling in its CUDA kernel path against a forward pass I wrote for correctness rather than for allocation efficiency.</figcaption>
+  </figure>
+
+  <h3>Where the static-memory win actually comes from</h3>
+  <p class="t">The output projection is <code>nn.Linear(512, 52239)</code> — d_model 512 into the 52,239-token German vocabulary — which accounts for <b>roughly 26.7 million parameters</b>, a large fraction of the model. My <code>QuantizedLinear</code> quantizes it. In the bitsandbytes comparison, that layer was left as a regular <code>nn.Linear</code> and not converted to <code>Linear8bitLt</code>. That single exclusion is where most of the 46.4% versus 29.3% gap comes from.</p>
+  <p class="t"><span style="color:var(--ink-3);font-size:12px">I'm stating what the code does rather than why, because my own notes reference a dimensional constraint that I did not write down at the time. Rather than reconstruct a plausible-sounding reason after the fact, I'd rather leave it as an open item — see section 06.</span></p>
+
+  <h3>Translation quality</h3>
+  <p class="t">Fifteen test sentences covering statements, questions, and varied structures, greedy decoding, run through all three variants. <b>All fifteen identical, word for word</b>, across original, custom-quantized, and bitsandbytes-quantized.</p>
+  <p class="t">Two sentences — "What time is it?" and "Where is the bathroom?" — came out grammatically imperfect in all three equally. That is a base-model limitation on question structures, not a quantization effect. It shows up identically in the unquantized model, which is exactly how you tell the difference.</p>
+
+  <div class="head"><span><b>04</b> &nbsp;Triton tiled matmul vs <span class="tt-none">cuBLAS</span></span><span class="tt-none">RTX 5080 Laptop</span></div>
+
+  <p class="t">A hand-written tiled matmul in Triton — 2D program grid, K-loop with masked loads and <code>tl.dot</code> accumulation, autotuned over block sizes — benchmarked against cuBLAS via <code>torch.matmul</code> in <b>true FP32, with TF32 disabled on both sides</b>.</p>
+
+  <p class="t">That disclosure is the one a reader who knows GPUs will look for first. Left on, PyTorch silently routes the cuBLAS call through the tensor cores, and the comparison stops being a comparison — my kernel runs on the FP32 CUDA cores while the baseline runs on dedicated matrix hardware, and the resulting gap tells you nothing about the kernel. With TF32 off, both paths hit the same units.</p>
+
+  <p class="t">The common currency is TFLOP/s (<code>2·M·N·K / time</code>) rather than GB/s because matmul is compute-bound at these sizes: the question is how close to peak FP32 you get, not how close to peak bandwidth. The ceiling is the mobile 5080's ~32 TFLOP/s FP32 peak.</p>
+
+  <div class="legend">
+    <span><i class="sw-mine"></i>Triton — mine</span>
+    <span><i class="sw-theirs"></i>cuBLAS — baseline</span>
+  </div>
+
+  <div class="table-wrap">
+    <div class="table-scroll">
+      <table>
+        <caption>Square matmul, true FP32, TF32 disabled on both sides · RTX 5080 Laptop · FP32 peak ≈ 32 TFLOP/s</caption>
+        <thead>
+          <tr>
+            <th scope="col">Size (N³)</th>
+            <th scope="col">Triton TFLOP/s</th>
+            <th scope="col">cuBLAS TFLOP/s</th>
+            <th scope="col" class="col-pk">Triton % peak</th>
+            <th scope="col" class="col-pk">cuBLAS % peak</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><th scope="row">512</th><td class="c-mine">8.77<span class="pk">27.4% peak</span></td><td class="c-theirs">8.24<span class="pk">25.7% peak</span></td><td class="c-mine col-pk">27.4%</td><td class="c-theirs col-pk">25.7%</td></tr>
+          <tr><th scope="row">1024</th><td class="c-mine">15.95<span class="pk">49.9% peak</span></td><td class="c-theirs">16.64<span class="pk">52.0% peak</span></td><td class="c-mine col-pk">49.9%</td><td class="c-theirs col-pk">52.0%</td></tr>
+          <tr><th scope="row">2048</th><td class="c-mine">19.30<span class="pk">60.3% peak</span></td><td class="c-theirs">21.78<span class="pk">68.1% peak</span></td><td class="c-mine col-pk">60.3%</td><td class="c-theirs col-pk">68.1%</td></tr>
+          <tr><th scope="row">4096</th><td class="c-mine">16.53<span class="pk">51.7% peak</span></td><td class="c-theirs">20.32<span class="pk">63.5% peak</span></td><td class="c-mine col-pk">51.7%</td><td class="c-theirs col-pk">63.5%</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <figure>
+    <svg class="chart" viewBox="0 0 720 300" role="img" aria-label="Grouped bar chart of Triton versus cuBLAS FP32 throughput at matrix sizes 512, 1024, 2048 and 4096. Triton reaches 8.77, 15.95, 19.30 and 16.53 TFLOP per second; cuBLAS reaches 8.24, 16.64, 21.78 and 20.32. A dashed reference line marks the RTX 5080 Laptop FP32 peak of about 32 TFLOP per second. Triton leads at 512, trails from 1024 up, and both regress at 4096.">
+      <g font-family="'IBM Plex Mono', monospace" font-size="10" fill="#7b7e81">
+        <g stroke="#e2e1de" stroke-width="1">
+          <line x1="56" y1="240" x2="700" y2="240"/>
+          <line x1="56" y1="176.5" x2="700" y2="176.5"/>
+          <line x1="56" y1="112.9" x2="700" y2="112.9"/>
+          <line x1="56" y1="49.4" x2="700" y2="49.4"/>
+        </g>
+        <text x="48" y="243.5" text-anchor="end">0</text>
+        <text x="48" y="180" text-anchor="end">10</text>
+        <text x="48" y="116.4" text-anchor="end">20</text>
+        <text x="48" y="52.9" text-anchor="end">30</text>
+        <text x="56" y="286" font-size="9" letter-spacing="1">MATRIX SIZE (N³)</text>
+        <text x="700" y="286" font-size="9" letter-spacing="1" text-anchor="end">TFLOP/S</text>
+      </g>
+
+      <line x1="56" y1="36.7" x2="700" y2="36.7" stroke="#16181a" stroke-width="1" stroke-dasharray="4 3"/>
+      <text x="56" y="30" font-family="'IBM Plex Mono', monospace" font-size="10" fill="#16181a">FP32 PEAK ≈ 32 TFLOP/s (RTX 5080 Laptop)</text>
+
+      <g>
+        <rect x="86.5"  y="184.3" width="46" height="55.7"  fill="#16181a"/>
+        <rect x="140.5" y="187.7" width="46" height="52.3"  fill="#c2c1bd"/>
+        <rect x="247.5" y="138.7" width="46" height="101.3" fill="#16181a"/>
+        <rect x="301.5" y="134.3" width="46" height="105.7" fill="#c2c1bd"/>
+        <rect x="408.5" y="117.4" width="46" height="122.6" fill="#16181a"/>
+        <rect x="462.5" y="101.6" width="46" height="138.4" fill="#c2c1bd"/>
+        <rect x="569.5" y="135.0" width="46" height="105.0" fill="#16181a"/>
+        <rect x="623.5" y="110.9" width="46" height="129.1" fill="#c2c1bd"/>
+      </g>
+
+      <g font-family="'IBM Plex Mono', monospace" font-size="10" text-anchor="middle">
+        <text x="109.5" y="179" fill="#16181a" font-weight="600">8.77</text>
+        <text x="163.5" y="182" fill="#7b7e81">8.24</text>
+        <text x="270.5" y="133" fill="#16181a" font-weight="600">15.95</text>
+        <text x="324.5" y="129" fill="#7b7e81">16.64</text>
+        <text x="431.5" y="112" fill="#16181a" font-weight="600">19.30</text>
+        <text x="485.5" y="96"  fill="#7b7e81">21.78</text>
+        <text x="592.5" y="129" fill="#16181a" font-weight="600">16.53</text>
+        <text x="646.5" y="105" fill="#7b7e81">20.32</text>
+      </g>
+
+      <line x1="56" y1="240" x2="700" y2="240" stroke="#16181a" stroke-width="1"/>
+      <g font-family="'IBM Plex Mono', monospace" font-size="11" fill="#16181a" text-anchor="middle">
+        <text x="136.5" y="257">512</text>
+        <text x="297.5" y="257">1024</text>
+        <text x="458.5" y="257">2048</text>
+        <text x="619.5" y="257">4096</text>
+      </g>
+    </svg>
+    <figcaption><b>Both implementations peak at 2048 and regress together at 4096.</b> Because they regress together, the cause is most likely a platform ceiling — thermal or power throttling on a mobile card, or L2 pressure once the working set outgrows cache — rather than anything in my kernel. The reference line is the point of the chart: without it the bars are just heights.</figcaption>
+  </figure>
+
+  <ul class="t">
+    <li><b>Ahead at 512, but that isn't a real win.</b> My kernel edges cuBLAS at 512 (8.77 vs 8.24). Both are overhead-bound at that size, so this is small-matrix noise rather than a kernel advantage, and I'd rather say so than bank it.</li>
+    <li><b>cuBLAS pulls ahead from 1024 up, but never by much</b> — about 11% at 2048 and 19% at 4096. In true FP32 with no tensor-core path available to either side, this is a fair fight, and landing within ~20% of NVIDIA's own library with a hand-derived kernel is the result worth reporting.</li>
+    <li><b>Efficiency climbs then regresses.</b> 27% → 50% → 60% of peak from 512 to 2048 as launch overhead amortizes over more compute — the expected roofline climb. At 4096 both drop together (Triton 60→52%, cuBLAS 68→64%).</li>
+  </ul>
+
+  <div class="head"><span><b>05</b> &nbsp;CUDA fundamentals from PMPP</span><span class="tt-none">RTX 4070 Laptop · sm_89</span></div>
+
+  <p class="t">A different machine and a different question. Starting from a naive 1024×1024 matmul kernel, apply three progressive optimizations and use Nsight Compute to verify each mechanism actually fired at hardware level — not just that the wall clock moved. Correctness was verified with an all-ones input, where every output element must equal exactly 1024.0. Timing is <code>cudaEvent</code> around the launch only, averaged over 3 runs.</p>
+
+  <div class="table-wrap">
+    <div class="table-scroll">
+      <table>
+        <caption>Wall-clock timing · RTX 4070 Laptop, sm_89, 36 SMs · N=1024 · <code>nvcc -O3 -arch=sm_89</code> · GFLOPs/s = 2147 / time_ms</caption>
+        <thead><tr><th scope="col">Kernel</th><th scope="col">Time (ms)</th><th scope="col">Speedup</th><th scope="col">GFLOPs/s</th></tr></thead>
+        <tbody>
+          <tr><th scope="row">Naive</th><td class="c-mine">3.0045</td><td>1x</td><td class="c-mine">714.6</td></tr>
+          <tr><th scope="row">Tiled</th><td class="c-mine">2.5589</td><td>1.17x</td><td class="c-mine">838.9</td></tr>
+          <tr><th scope="row">Coarsened</th><td class="c-mine">2.4240</td><td>1.24x</td><td class="c-mine">885.7</td></tr>
+          <tr><th scope="row"><code>torch.matmul</code></th><td class="c-theirs">0.227</td><td class="c-theirs">13.2x</td><td class="c-theirs">9457.7</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="table-wrap">
+    <div class="table-scroll">
+      <table>
+        <caption>Nsight Compute, <code>ncu --set full</code> · same hardware · durations differ from the cudaEvent averages because profiling adds overhead, but are internally consistent across the three kernels</caption>
+        <thead>
+          <tr>
+            <th scope="col">Kernel</th><th scope="col">Duration</th>
+            <th scope="col">Compute thpt</th><th scope="col">Memory thpt</th>
+            <th scope="col" class="col-pk">Reg/thread</th><th scope="col">L1TEX est. speedup</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><th scope="row">Naive</th><td>1.92 ms</td><td>98.58%</td><td>98.58%</td><td class="col-pk">40</td><td class="c-mine">43.13%</td></tr>
+          <tr><th scope="row">Tiled</th><td>1.47 ms</td><td>96.64%</td><td>96.64%</td><td class="col-pk">40</td><td class="c-mine">3.36%</td></tr>
+          <tr><th scope="row">Coarsened</th><td>1.41 ms</td><td>96.52%</td><td>96.52%</td><td class="col-pk">40</td><td class="c-mine">3.48%</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <figure>
+    <img class="shot" src="img/naive_ncu.png" width="2267" height="392" loading="lazy" decoding="async" alt="Nsight Compute summary row for the naive matmul kernel, showing 43.13 percent estimated speedup, 1.92 millisecond duration, 98.58 percent compute and memory throughput, 40 registers per thread, grid size 64 by 64 by 1 and block size 16 by 16 by 1 on an RTX 4070 Laptop GPU.">
+    <figcaption><b>Naive kernel.</b> The number to read is the leftmost column: <b>43.13% estimated speedup</b> left on the table from the L1TEX global-load access pattern. Only 18 of every 32 bytes per sector were being used — the signature of uncoalesced access. Note also grid <code>64, 64, 1</code> and 40 registers/thread, both of which matter for the comparisons below.</figcaption>
+  </figure>
+
+  <figure>
+    <img class="shot" src="img/tiled_ncu.png" width="2359" height="444" loading="lazy" decoding="async" alt="Nsight Compute summary row for the tiled matmul kernel, showing 3.36 percent estimated speedup, 1.47 millisecond duration, 96.64 percent compute and memory throughput, 40 registers per thread, and grid size 64 by 64 by 1.">
+    <figcaption><b>Tiled kernel — the same row after fixing the access pattern.</b> Estimated speedup drops <b>43.13% → 3.36%</b>: essentially resolved. This is the hardware confirming the arithmetic-intensity math directly (naive 0.25 OP/B, tiled 8 OP/B), which is the reason to open the profiler rather than trust the wall clock.</figcaption>
+  </figure>
+
+  <figure>
+    <img class="shot" src="img/coarsened_ncu.png" width="2495" height="531" loading="lazy" decoding="async" alt="Nsight Compute summary row for the thread-coarsened matmul kernel, showing 3.48 percent estimated speedup, 1.41 millisecond duration, 96.52 percent compute and memory throughput, 40 registers per thread, and grid size 32 by 64 by 1.">
+    <figcaption><b>Coarsened kernel.</b> Grid size reads <code>32, 64, 1</code> against the previous two kernels' <code>64, 64, 1</code> — exactly the intended halving of blocks along the column dimension at <code>COARSE_FACTOR=2</code>, confirmed at hardware level rather than assumed from the source.</figcaption>
+  </figure>
+
+  <h3>What the profiler actually taught me</h3>
+
+  <ul class="t">
+    <li><b>Coalescing was measurably fixed, but the wall clock barely moved.</b> 43.13% → 3.36% is a clean mechanical win, yet tiling only bought 1.17x. The likely reason is that the 4070's L2 is large enough relative to the 4 MB per-matrix footprint at N=1024 to already absorb some of naive's redundant reads, masking part of tiling's theoretical advantage. Textbook examples promise 5–10x; on this hardware at this size, they don't materialise.</li>
+    <li><b>None of the three kernels is cleanly memory- or compute-bound.</b> Compute and memory throughput both sit at ~97–98% in all three — they're bottlenecked on both at once. That caps how much further any amount of tuning can deliver, and it says closing the remaining 13.2x gap to <code>torch.matmul</code> needs a different compute path entirely (tensor cores), not a better FP32 CUDA-core kernel.</li>
+    <li><b>Registers per thread stayed flat at 40, which I did not expect.</b> Coarsening holds <code>Pvalue[COARSE_FACTOR]</code> per thread instead of a scalar, so I predicted a higher register count. The compiler evidently had headroom at this factor. Worth rechecking at <code>COARSE_FACTOR=4</code>, where occupancy tradeoffs should actually surface.</li>
+    <li><b>TILE_WIDTH=16 was chosen deliberately.</b> It divides N=1024 evenly, so no boundary checks are needed, and it gives 256 threads/block — enough for shared-memory reuse to matter. An earlier accidental run at <code>TILE_WIDTH=2</code>, left over from 4×4 correctness testing, took <b>39 ms — about 15x slower than naive</b>, because 4-thread blocks have almost no reuse to amortize and add heavy launch overhead. I'm keeping that in because it's the clearest evidence I have that I understand why the parameter matters rather than just which value to use.</li>
+  </ul>
+
+  <div class="head"><span><b>06</b> &nbsp;Open items</span></div>
+
+  <p class="t">Stated plainly, because a list of finished things with no unfinished things next to it isn't credible.</p>
+  <ul class="t">
+    <li><b>Re-run the FlashAttention-2 benchmark</b> with symmetric FLOP accounting in the harness itself, and with a defensible peak constant, rather than relying on the corrected arithmetic in section 02.</li>
+    <li><b>Skip the masked K/V blocks</b> in the FA-2 inner loop. Currently every block is visited and roughly half the work is discarded at long sequence lengths.</li>
+    <li><b>Document the bitsandbytes exclusion.</b> My notes reference a dimensional constraint on the output projection layer that I did not record at the time. It needs re-deriving from the actual failure rather than reconstructing after the fact.</li>
+    <li><b>2D block tiling / register tiling</b> toward closing the gap to <code>torch.matmul</code>. Not started.</li>
+    <li><b>A paged KV cache and continuous batching</b> inference server. Not started.</li>
+    <li><b>Speculative decoding.</b> Not started.</li>
+  </ul>
+
+  <div class="head"><span><b>07</b> &nbsp;Reproduce it</span></div>
+
+  <p class="t">Everything is in <a href="https://github.com/VrajPatel105/cpp-gpu-inference" target="_blank" rel="noopener" class="tt-none">github.com/VrajPatel105/cpp-gpu-inference</a>. The folders that map to the sections above:</p>
+
+  <div class="table-wrap">
+    <div class="table-scroll">
+      <table>
+        <caption>Folder map</caption>
+        <thead><tr><th scope="col">Section</th><th scope="col">Folder</th></tr></thead>
+        <tbody>
+          <tr><th scope="row">FlashAttention-2</th><td><a href="https://github.com/VrajPatel105/cpp-gpu-inference/tree/main/flash-attention" target="_blank" rel="noopener" class="tt-none">flash-attention/</a></td></tr>
+          <tr><th scope="row">INT8 quantization</th><td><a href="https://github.com/VrajPatel105/cpp-gpu-inference/tree/main/quantization" target="_blank" rel="noopener" class="tt-none">quantization/</a> · <a href="https://github.com/VrajPatel105/cpp-gpu-inference/tree/main/quantization/llm.int8%28%29" target="_blank" rel="noopener" class="tt-none">quantization/llm.int8()/</a></td></tr>
+          <tr><th scope="row">Triton kernels</th><td><a href="https://github.com/VrajPatel105/cpp-gpu-inference/tree/main/triton-kernels" target="_blank" rel="noopener" class="tt-none">triton-kernels/</a></td></tr>
+          <tr><th scope="row">CUDA / PMPP</th><td><a href="https://github.com/VrajPatel105/cpp-gpu-inference/tree/main/gpu-fundamentals-pmpp/cuda" target="_blank" rel="noopener" class="tt-none">gpu-fundamentals-pmpp/cuda/</a></td></tr>
+          <tr><th scope="row">Transformer</th><td><a href="https://github.com/VrajPatel105/cpp-gpu-inference/tree/main/en-de-transformer" target="_blank" rel="noopener" class="tt-none">en-de-transformer/</a></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <p class="t">The FlashAttention correctness checks and benchmark live in <code>flash-attention/flash_attention.py</code> under <code>__main__</code>. The CUDA kernels are compiled with <code>nvcc -O3 -arch=sm_89</code> and profiled with <code>ncu --set full</code>; the raw <code>.ncu-rep</code> and <code>.nsys-rep</code> files are committed alongside the screenshots above, so the counters can be checked rather than taken on trust.</p>
+
+  <footer>
+    <a href="../index.html">← Back to Vraj Patel</a> &nbsp;·&nbsp; Built with plain HTML. Hosted on GitHub Pages.
+  </footer>
+
+</div>
+</body>
+</html>
