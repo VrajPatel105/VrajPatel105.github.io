@@ -1,2 +1,10 @@
 .claude/
 temp.html
+
+# Local working files — this repo is published at vrajpatel105.github.io,
+# so anything committed here is publicly reachable. Delete a line to publish it.
+portfolio-build-prompt.md
+design-refs/
+design-explore/
+resume/
+
