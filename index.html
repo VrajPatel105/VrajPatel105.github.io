@@ -14,330 +14,449 @@
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,500;8..60,600&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 
 <style>
   :root{
-    --canvas:#fafaf9;
-    --ink:#16181a;
-    --ink-2:#494c4f;
-    --ink-3:#7b7e81;
-    --line:#e2e1de;
-    --line-2:#cfcecb;
+    --canvas:#f7f6f3;
+    --panel:#f1efe9;
+    --ink:#181a17;
+    --ink-2:#4b4d47;
+    --ink-3:#5c5e58;
+    --line:#dedad2;
+    --line-2:#c9c4b9;
 
-    /* two data roles, used consistently everywhere on the site */
-    --mine:#16181a;
-    --theirs:#c2c1bd;
+    /* single bold accent — deep forest teal. Distinct from generic tech-blue
+       and from the site's previous terracotta; used loudly and consistently. */
+    --accent:#0c5c53;
+    --accent-ink:#083f39;
+    --accent-tint:#e4efec;
 
-    /* link color only — never a data mark, so it cannot compete with the pair */
-    --link:#3d3a8c;
-
+    --serif:'Source Serif 4', ui-serif, Georgia, 'Times New Roman', serif;
+    --sans:'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
     --mono:'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+    /* one spacing scale, used everywhere */
+    --s1:8px; --s2:16px; --s3:24px; --s4:32px; --s5:48px; --s6:64px;
   }
 
   *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-  html{-webkit-text-size-adjust:100%}
+  html{-webkit-text-size-adjust:100%;scroll-behavior:smooth}
 
   body{
     background:var(--canvas);
     color:var(--ink);
-    font-family:var(--mono);
-    font-size:13px;
-    line-height:1.5;
-    letter-spacing:-0.02em;
-    font-feature-settings:'tnum' 1,'zero' 1;
+    font-family:var(--sans);
+    font-size:15px;
+    line-height:1.55;
     -webkit-font-smoothing:antialiased;
   }
 
-  .wrap{max-width:940px;margin:0 auto;padding:44px 24px 80px}
+  a{color:var(--accent-ink);text-decoration:underline;text-underline-offset:3px;text-decoration-color:var(--line-2)}
+  a:hover{text-decoration-color:currentColor}
+  a:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:2px}
 
-  a{color:var(--link)}
-  a:focus-visible{outline:2px solid var(--link);outline-offset:3px;border-radius:2px}
+  code{font-family:var(--mono);font-size:0.92em;background:var(--panel);padding:0.05em 0.35em;border-radius:3px;white-space:nowrap}
+  .tt-none{text-transform:none}
+  em{font-style:normal;font-weight:600;color:var(--ink)}
 
-  /* ── section head: one dense line + hairline ── */
-  .head{
-    display:flex;justify-content:space-between;align-items:baseline;gap:14px;
-    font-size:10.5px;letter-spacing:0.08em;text-transform:uppercase;
-    color:var(--ink-3);padding:10px 0;border-bottom:1px solid var(--ink);
-    margin:34px 0 18px;
+  .skip-link{
+    position:absolute;left:-9999px;top:0;z-index:100;
+    background:var(--ink);color:var(--canvas);padding:10px 16px;
+    font-family:var(--mono);font-size:12px;border-radius:0 0 4px 0;
   }
-  .head b{color:var(--ink);font-weight:600}
-  /* proper nouns keep their real casing: cuBLAS, TFLOP/s, sm_89, PyTorch */
-  .tt-none{text-transform:none;letter-spacing:-0.01em}
-  code{font-family:inherit;font-size:1em}
-  em{font-style:normal;text-decoration:underline;text-underline-offset:2px}
+  .skip-link:focus{left:0}
 
-  /* ── hero ── */
-  header{margin-bottom:4px}
-  h1{font-size:1.7rem;font-weight:600;letter-spacing:-0.05em;line-height:1.1;margin-bottom:12px}
-  .positioning{font-size:13.5px;line-height:1.6;color:var(--ink-2);max-width:74ch;margin-bottom:14px}
+  /* ── page shell: sidebar + main, no dead zone at any width ── */
+  .page{
+    max-width:1400px;
+    margin:0 auto;
+    display:grid;
+    grid-template-columns:300px 1fr;
+    gap:var(--s6);
+    padding:var(--s6) var(--s4);
+    align-items:start;
+  }
 
-  .spec{border-top:1px solid var(--line);margin-bottom:12px;max-width:640px}
-  .spec div{display:flex;gap:16px;padding:2px 0;border-bottom:1px solid var(--line)}
-  .spec dt{flex:0 0 128px;font-size:10.5px;letter-spacing:0.08em;text-transform:uppercase;color:var(--ink-3);line-height:1.55}
-  .spec dd{flex:1;min-width:0;font-size:12.5px;color:var(--ink);line-height:1.55}
+  /* ── sidebar ── */
+  .sidebar{position:sticky;top:0;padding-top:var(--s3);max-height:100vh;overflow-y:auto}
+  .sidebar h1{
+    font-family:var(--serif);font-weight:600;font-size:2.1rem;letter-spacing:-0.02em;
+    line-height:1.1;margin-bottom:6px;color:var(--ink);
+  }
+  .role{font-family:var(--mono);font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:var(--accent-ink);margin-bottom:var(--s4);padding-bottom:var(--s3);border-bottom:2px solid var(--accent)}
 
-  .links{display:flex;flex-wrap:wrap;font-size:11.5px;gap:0 24px}
-  .links a{text-decoration:none;padding:4px 0;letter-spacing:0.01em;white-space:nowrap}
-  .links a:hover{text-decoration:underline}
+  .spec{margin-bottom:var(--s4)}
+  .spec div{padding:var(--s1) 0;border-bottom:1px solid var(--line)}
+  .spec div:first-child{border-top:1px solid var(--line)}
+  .spec dt{font-family:var(--mono);font-size:10px;letter-spacing:0.08em;text-transform:uppercase;color:var(--ink-3);margin-bottom:3px}
+  .spec dd{font-size:13.5px;color:var(--ink);line-height:1.45}
 
-  /* ── result tiles ── */
-  .tiles{display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
-  .tile{display:block;text-decoration:none;color:inherit;padding:16px 18px 18px 0;border-right:1px solid var(--line)}
-  .tile:nth-child(2),.tile:nth-child(3){padding-left:18px}
-  .tile:last-child{border-right:0;padding-right:0}
-  .tile-num{font-size:1.7rem;font-weight:600;letter-spacing:-0.055em;line-height:1;margin-bottom:9px}
-  .tile:hover .tile-num{color:var(--link)}
-  .tile-label{font-size:12px;line-height:1.5;color:var(--ink-2)}
-  .tile-hw{display:block;margin-top:10px;font-size:10.5px;color:var(--ink-3);line-height:1.45}
-  .tile-go{display:block;margin-top:7px;font-size:10.5px;color:var(--link);letter-spacing:0.03em}
+  .side-nav{display:flex;flex-direction:column;margin-bottom:var(--s4)}
+  .side-nav a{
+    font-family:var(--mono);font-size:11.5px;letter-spacing:0.04em;
+    color:var(--ink-2);text-decoration:none;padding:6px 0;
+    border-bottom:1px solid transparent;
+  }
+  .side-nav a:hover{color:var(--accent-ink);border-bottom-color:var(--accent)}
+  .side-nav a.active{color:var(--accent-ink);font-weight:600;border-bottom-color:var(--accent)}
 
-  /* ── entry rows (work / experience / writing) ── */
-  .rows{border-top:1px solid var(--line)}
-  .row{display:block;padding:16px 0;border-bottom:1px solid var(--line);text-decoration:none;color:inherit}
-  a.row:hover .row-title{color:var(--link)}
-  .row-head{display:flex;justify-content:space-between;align-items:baseline;gap:14px;flex-wrap:wrap;margin-bottom:5px}
-  .row-title{font-size:14px;font-weight:600;letter-spacing:-0.03em;color:var(--ink)}
-  .row-when{font-size:10.5px;color:var(--ink-3);letter-spacing:0.05em;white-space:nowrap}
-  .row-desc{font-size:12.5px;line-height:1.55;color:var(--ink-2);max-width:78ch}
-  .row-links{margin-top:7px;font-size:11px;display:flex;flex-wrap:wrap;gap:0 18px}
-  .row-links a{text-decoration:none}
-  .row-links a:hover{text-decoration:underline}
-  .row-stats{margin-top:9px;font-size:11px;color:var(--ink-3);display:flex;flex-wrap:wrap;gap:4px 18px}
-  .row-stats b{color:var(--ink);font-weight:600}
+  .contact-links{display:flex;flex-direction:column;gap:4px;margin-bottom:var(--s5)}
+  .contact-links a{
+    font-size:13px;color:var(--ink-2);text-decoration:none;
+    padding:3px 0;border-bottom:1px solid transparent;
+  }
+  .contact-links a:hover{color:var(--accent-ink);border-bottom-color:var(--line-2)}
+  .contact-links a.resume{color:var(--accent-ink);font-weight:600}
 
-  .row-lead{border-left:2px solid var(--ink);padding-left:16px}
+  .sidebar-foot{font-family:var(--mono);font-size:10px;letter-spacing:0.04em;color:var(--ink-3);line-height:1.6}
+
+  /* ── main ── */
+  main{min-width:0}
+  .lead{
+    font-family:var(--serif);font-size:1.5rem;line-height:1.42;font-weight:400;
+    color:var(--ink);max-width:46ch;margin-bottom:var(--s6);
+  }
+  .lead code{font-family:var(--mono);font-size:0.72em;vertical-align:0.05em;padding:0.1em 0.4em}
+
+  section{margin-bottom:var(--s6);scroll-margin-top:var(--s3)}
+
+  .section-head{
+    display:flex;justify-content:space-between;align-items:baseline;gap:var(--s2);
+    margin-bottom:var(--s3);padding-bottom:var(--s1);border-bottom:1px solid var(--ink);
+  }
+  .section-head h2{font-family:var(--serif);font-weight:600;font-size:1.3rem;letter-spacing:-0.01em}
+  .section-head .section-sub{font-family:var(--mono);font-size:10.5px;letter-spacing:0.04em;color:var(--ink-3);white-space:nowrap}
+
+  /* ── stat cards ── */
+  .stat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--s2)}
+  .stat-card{
+    display:block;text-decoration:none;color:inherit;
+    background:var(--panel);border:1px solid var(--line);border-top:3px solid var(--accent);
+    border-radius:6px;padding:var(--s3);
+  }
+  .stat-card:hover{border-color:var(--line-2);background:var(--accent-tint)}
+  .stat-num{font-family:var(--mono);font-size:1.9rem;font-weight:600;letter-spacing:-0.03em;color:var(--accent-ink);line-height:1;margin-bottom:var(--s2);font-feature-settings:'tnum' 1,'zero' 1}
+  .stat-label{font-size:13px;line-height:1.5;color:var(--ink-2);margin-bottom:var(--s2)}
+  .stat-hw{display:block;font-family:var(--mono);font-size:10.5px;color:var(--ink-3);line-height:1.5;margin-bottom:var(--s1)}
+  .stat-go{display:block;font-family:var(--mono);font-size:11px;color:var(--accent-ink);font-weight:600}
+
+  /* ── standardized entry component (Work / Experience / Writing) ── */
+  .entries{display:flex;flex-direction:column;gap:var(--s4)}
+  .entry{padding-bottom:var(--s4);border-bottom:1px solid var(--line)}
+  .entries .entry:last-child{border-bottom:0;padding-bottom:0}
+  a.entry{display:block;text-decoration:none;color:inherit}
+  .entry-lead{border-left:3px solid var(--accent);padding-left:var(--s3)}
+
+  .entry-head{display:flex;justify-content:space-between;align-items:baseline;gap:var(--s2);flex-wrap:wrap;margin-bottom:var(--s1)}
+  .entry-title{font-family:var(--serif);font-weight:600;font-size:1.08rem;letter-spacing:-0.01em;color:var(--ink)}
+  a.entry:hover .entry-title{color:var(--accent-ink)}
+  .entry-when{font-family:var(--mono);font-size:10.5px;letter-spacing:0.04em;color:var(--ink-3);white-space:nowrap}
+
+  .entry-desc{font-size:13.5px;line-height:1.62;color:var(--ink-2);max-width:70ch}
+
+  .entry-stats{display:flex;flex-wrap:wrap;gap:var(--s1);margin-top:var(--s2)}
+  .entry-stats span{
+    display:inline-flex;align-items:baseline;gap:5px;
+    font-family:var(--mono);font-size:11px;color:var(--ink-2);
+    background:var(--panel);border:1px solid var(--line);border-radius:4px;
+    padding:4px 9px;line-height:1.4;
+  }
+  .entry-stats b{color:var(--accent-ink);font-weight:600}
+
+  .entry-links{display:flex;flex-wrap:wrap;gap:0 var(--s3);margin-top:var(--s2)}
+  .entry-links a{font-size:12.5px;font-weight:500}
 
   /* ── notes ── */
-  .notes{border-top:1px solid var(--line)}
-  .note{display:flex;align-items:baseline;gap:14px;padding:9px 0;border-bottom:1px solid var(--line);text-decoration:none;color:inherit}
-  .note:hover .note-title{color:var(--link)}
-  .note-title{font-size:12.5px;font-weight:500;flex:1;min-width:0}
-  .note-sub{font-size:10.5px;color:var(--ink-3);white-space:nowrap}
-  .note-badge{font-size:9.5px;letter-spacing:0.1em;color:var(--ink-3);border:1px solid var(--line-2);padding:1px 6px;flex-shrink:0}
-  .notes-tagline{font-size:11.5px;color:var(--ink-3);margin-bottom:14px;line-height:1.55}
-
-  footer{margin-top:20px;padding-top:12px;border-top:1px solid var(--line);font-size:10.5px;letter-spacing:0.08em;text-transform:uppercase;color:var(--ink-3)}
-
-  @media (max-width:760px){
-    .tiles{grid-template-columns:1fr}
-    .tile{border-right:0;border-bottom:1px solid var(--line);padding:16px 0 18px!important}
-    .tile:last-child{border-bottom:0}
+  .notes{display:flex;flex-direction:column}
+  .note{
+    display:flex;align-items:baseline;gap:var(--s2);padding:10px 0;
+    border-bottom:1px solid var(--line);text-decoration:none;color:inherit;
   }
-  @media (max-width:560px){
-    .wrap{padding:30px 16px 64px}
-    .spec dt{flex:0 0 100px;font-size:10px}
-    .head{font-size:10px;letter-spacing:0.05em}
-    .links{gap:0 18px}
-    .note-sub{display:none}
+  .notes .note:first-child{border-top:1px solid var(--line)}
+  .note-title{font-size:13.5px;font-weight:500;flex:1;min-width:0;color:var(--ink)}
+  .note:hover .note-title{color:var(--accent-ink)}
+  .note-sub{font-family:var(--mono);font-size:10.5px;color:var(--ink-3);white-space:nowrap}
+  .note-badge{font-family:var(--mono);font-size:9.5px;letter-spacing:0.08em;color:var(--ink-3);border:1px solid var(--line-2);border-radius:3px;padding:2px 7px;flex-shrink:0}
+  .notes-tagline{font-size:13px;color:var(--ink-2);margin-bottom:var(--s3);line-height:1.55}
+
+  footer.site-footer{
+    grid-column:1 / -1;margin-top:var(--s4);padding-top:var(--s2);
+    border-top:1px solid var(--line);font-family:var(--mono);font-size:10.5px;
+    letter-spacing:0.06em;text-transform:uppercase;color:var(--ink-3);
+  }
+
+  @media (max-width:980px){
+    .page{grid-template-columns:1fr;gap:var(--s5);padding:var(--s5) var(--s3)}
+    .sidebar{position:static;max-height:none;padding-top:0;border-bottom:1px solid var(--line);padding-bottom:var(--s4);margin-bottom:var(--s2)}
+    .side-nav{flex-direction:row;flex-wrap:wrap;gap:0 var(--s3)}
+    .stat-grid{grid-template-columns:1fr 1fr}
+  }
+  @media (max-width:640px){
+    .page{padding:var(--s4) var(--s2)}
+    .stat-grid{grid-template-columns:1fr}
+    .entry-head{flex-direction:column;align-items:flex-start;gap:2px}
+    .lead{font-size:1.3rem}
+    .contact-links{flex-direction:row;flex-wrap:wrap;gap:var(--s1) var(--s3)}
   }
   @media (prefers-reduced-motion:reduce){
+    html{scroll-behavior:auto}
     *,*::before,*::after{transition:none!important;animation:none!important;scroll-behavior:auto!important}
   }
 </style>
 </head>
 <body>
-<div class="wrap">
+<a class="skip-link" href="#main-content">Skip to content</a>
 
-  <header>
+<div class="page">
+
+  <aside class="sidebar">
     <h1>Vraj Patel</h1>
-    <p class="positioning">I build GPU inference systems from scratch — CUDA and Triton kernels, FlashAttention-2 forward and backward, INT8 post-training quantization — and benchmark each one against the production baseline it's meant to replace.</p>
+    <p class="role">ML systems / GPU inference</p>
+
     <dl class="spec">
       <div><dt>School</dt><dd>CS, UMass Dartmouth</dd></div>
       <div><dt>Graduating</dt><dd>May 2027</dd></div>
       <div><dt>Seeking</dt><dd>ML systems / inference / ML infrastructure roles, starting May 2027</dd></div>
     </dl>
-    <nav class="links" aria-label="Contact and profiles">
+
+    <nav class="side-nav" aria-label="Section navigation">
+      <a href="#results">01 &nbsp;Selected results</a>
+      <a href="#work">02 &nbsp;Work</a>
+      <a href="#experience">03 &nbsp;Experience</a>
+      <a href="#writing">04 &nbsp;Writing</a>
+      <a href="#notes">05 &nbsp;Notes</a>
+    </nav>
+
+    <nav class="contact-links" aria-label="Contact and profiles">
       <a href="https://github.com/VrajPatel105" target="_blank" rel="noopener">github.com/VrajPatel105</a>
       <a href="https://www.linkedin.com/in/vrajpatel105/" target="_blank" rel="noopener">linkedin.com/in/vrajpatel105</a>
       <a href="mailto:vrajp1052005@gmail.com">vrajp1052005@gmail.com</a>
-      <a href="resume.pdf" target="_blank" rel="noopener">resume.pdf</a>
+      <a class="resume" href="resume.pdf" target="_blank" rel="noopener">resume.pdf →</a>
     </nav>
-  </header>
 
-  <div class="head"><span><b>01</b> &nbsp;Selected results</span><span class="tt-none">Each traceable to a folder in the repo</span></div>
+    <p class="sidebar-foot">Built with plain HTML.<br>Hosted on GitHub Pages.</p>
+  </aside>
 
-  <div class="tiles">
-    <a class="tile" href="gpu-inference/index.html">
-      <div class="tile-num">~288 MB</div>
-      <div class="tile-label">peak at seq_len 8192 — matches SDPA, confirming O(N) scaling. FlashAttention-2 forward <em>and</em> backward from scratch in Triton, wrapped in a custom <code>torch.autograd.Function</code>. SDPA is still faster at long sequences because it skips masked blocks via causal block-skipping, which I haven't implemented yet.</div>
-      <span class="tile-hw">RTX 5080 Laptop · 16 GB · CUDA 12.9 · causal, fp16</span>
-      <span class="tile-go">Read the writeup →</span>
-    </a>
-    <a class="tile" href="https://github.com/VrajPatel105/cpp-gpu-inference/tree/main/quantization" target="_blank" rel="noopener">
-      <div class="tile-num">46.4%</div>
-      <div class="tile-label">static memory reduction from that quantizer, against bitsandbytes' 29.3% on the same model — with 15/15 identical translations and perplexity within 0.02%.</div>
-      <span class="tile-hw">RTX 5080 Laptop · 16 GB · CUDA 12.9</span>
-      <span class="tile-go">quantization →</span>
-    </a>
-    <a class="tile" href="https://github.com/VrajPatel105/cpp-gpu-inference/tree/main/triton-kernels" target="_blank" rel="noopener">
-      <div class="tile-num">60.3%</div>
-      <div class="tile-label">of FP32 peak at 2048 from a hand-written Triton tiled matmul — within ~20% of <span class="tt-none">cuBLAS</span> in true FP32 across 512–4096, and ahead at 512.</div>
-      <span class="tile-hw">RTX 5080 Laptop · TF32 disabled on both sides</span>
-      <span class="tile-go">triton-kernels →</span>
-    </a>
-  </div>
+  <main id="main-content">
 
-  <div class="head"><span><b>02</b> &nbsp;Work</span><span class="tt-none">Built from first principles</span></div>
+    <p class="lead">I build GPU inference systems from scratch — CUDA and Triton kernels, FlashAttention-2 forward and backward, INT8 post-training quantization — and benchmark each one against the production baseline it's meant to replace.</p>
 
-  <div class="rows">
+    <section id="results">
+      <div class="section-head"><h2>01 &nbsp;Selected results</h2><span class="section-sub tt-none">Each traceable to a folder in the repo</span></div>
 
-    <div class="row row-lead">
-      <div class="row-head">
-        <span class="row-title">paged-inference-engine — a mini vLLM-style inference server</span>
-        <span class="row-when">August 2026</span>
+      <div class="stat-grid">
+        <a class="stat-card" href="gpu-inference/index.html">
+          <div class="stat-num">~288 MB</div>
+          <div class="stat-label">peak at seq_len 8192 — matches SDPA, confirming O(N) scaling. FlashAttention-2 forward <em>and</em> backward from scratch in Triton, wrapped in a custom <code>torch.autograd.Function</code>. SDPA is still faster at long sequences because it skips masked blocks via causal block-skipping, which I haven't implemented yet.</div>
+          <span class="stat-hw">RTX 5080 Laptop · 16 GB · CUDA 12.9 · causal, fp16</span>
+          <span class="stat-go">Read the writeup →</span>
+        </a>
+        <a class="stat-card" href="https://github.com/VrajPatel105/cpp-gpu-inference/tree/main/quantization" target="_blank" rel="noopener">
+          <div class="stat-num">46.4%</div>
+          <div class="stat-label">static memory reduction from that quantizer, against bitsandbytes' 29.3% on the same model — with 15/15 identical translations and perplexity within 0.02%.</div>
+          <span class="stat-hw">RTX 5080 Laptop · 16 GB · CUDA 12.9</span>
+          <span class="stat-go">quantization →</span>
+        </a>
+        <a class="stat-card" href="https://github.com/VrajPatel105/cpp-gpu-inference/tree/main/triton-kernels" target="_blank" rel="noopener">
+          <div class="stat-num">60.3%</div>
+          <div class="stat-label">of FP32 peak at 2048 from a hand-written Triton tiled matmul — within ~20%&nbsp;of <span class="tt-none">cuBLAS</span> in true FP32 across 512–4096, and ahead at 512.</div>
+          <span class="stat-hw">RTX 5080 Laptop · TF32 disabled on both sides</span>
+          <span class="stat-go">triton-kernels →</span>
+        </a>
       </div>
-      <p class="row-desc">A block-based paged KV cache, a continuous batching scheduler, a FlashAttention-2 Triton kernel rewritten to read and write through a block table, and INT8 KV cache quantization, all built without referencing vLLM's source. Benchmarked against a naive sequential baseline across a concurrency sweep; at this model's scale the naive baseline wins on throughput, and the writeup explains why rather than hiding it.</p>
-      <div class="row-stats">
-        <span><b>95→176 tok/s</b> paged throughput, N=1 to N=32, never crosses naive's ~530-550</span>
-        <span><b>~0.001</b> max abs diff, paged FA-2 kernel vs SDPA, scrambled block layout</span>
-        <span><b>~1100ms → ~69ms</b> paged TTFT after adding kernel warmup</span>
+    </section>
+
+    <section id="work">
+      <div class="section-head"><h2>02 &nbsp;Work</h2><span class="section-sub tt-none">Built from first principles</span></div>
+
+      <div class="entries">
+
+        <div class="entry entry-lead">
+          <div class="entry-head">
+            <span class="entry-title">paged-inference-engine — a mini vLLM-style inference server</span>
+            <span class="entry-when">August 2026</span>
+          </div>
+          <p class="entry-desc">A block-based paged KV cache, a continuous batching scheduler, a FlashAttention-2 Triton kernel rewritten to read and write through a block table, and INT8 KV cache quantization, all built without referencing vLLM's source. Benchmarked against a naive sequential baseline across a concurrency sweep; at this model's scale the naive baseline wins on throughput, and the writeup explains why rather than hiding it.</p>
+          <div class="entry-stats">
+            <span><b>95→176 tok/s</b>&nbsp;paged throughput, N=1 to N=32, never crosses naive's ~530-550</span>
+            <span><b>~0.001</b>&nbsp;max abs diff, paged FA-2 kernel vs SDPA, scrambled block layout</span>
+            <span><b>~1100ms&nbsp;→&nbsp;~69ms</b>&nbsp;paged TTFT after adding kernel warmup</span>
+          </div>
+          <div class="entry-links">
+            <a href="paged-inference/index.html">Read the full writeup →</a>
+            <a href="https://github.com/VrajPatel105/paged-inference-engine" target="_blank" rel="noopener">Repository →</a>
+          </div>
+        </div>
+
+        <div class="entry">
+          <div class="entry-head">
+            <span class="entry-title">cpp-gpu-inference — an end-to-end GPU inference stack</span>
+          </div>
+          <p class="entry-desc">CUDA and Triton kernels, FlashAttention-2 forward and backward written from scratch and wrapped in a custom <code>torch.autograd.Function</code>, and an LLM.int8()-style INT8 post-training quantizer — each one benchmarked against the production library it replaces (cuBLAS, PyTorch SDPA, bitsandbytes) rather than against itself. Profiled with Nsight Compute to confirm the intended mechanism actually fired at hardware level, not just that the wall clock moved.</p>
+          <div class="entry-stats">
+            <span><b>46.4%</b>&nbsp;static memory cut vs bitsandbytes' 29.3%</span>
+            <span><b>60.3%</b>&nbsp;of FP32 peak, Triton matmul at 2048</span>
+            <span><b>43.13%&nbsp;→&nbsp;3.36%</b>&nbsp;L1TEX coalescing gap closed by tiling</span>
+          </div>
+          <div class="entry-links">
+            <a href="gpu-inference/index.html">Read the full writeup →</a>
+            <a href="https://github.com/VrajPatel105/cpp-gpu-inference" target="_blank" rel="noopener">Repository →</a>
+          </div>
+        </div>
+
+        <div class="entry">
+          <div class="entry-head">
+            <span class="entry-title">en-de-transformer — encoder-decoder from scratch in PyTorch</span>
+          </div>
+          <p class="entry-desc">6 encoder and 6 decoder blocks, 8 attention heads, d_model 512, trained on 200K Tatoeba English–German pairs. This is the substrate the FlashAttention-2 kernel and the INT8 quantizer were integrated into and measured on — a real model rather than a synthetic benchmark harness.</p>
+          <div class="entry-links">
+            <a href="https://github.com/VrajPatel105/cpp-gpu-inference/tree/main/en-de-transformer" target="_blank" rel="noopener">Repository →</a>
+            <a href="transformer-trace/index.html">Shape trace writeup →</a>
+          </div>
+        </div>
+
+        <div class="entry">
+          <div class="entry-head">
+            <span class="entry-title">CMVS — simulated autonomous UUV for sonar mine detection</span>
+            <span class="entry-when">2025</span>
+          </div>
+          <p class="entry-desc">Blue Tech Externship with Courage Builder. Simulated autonomous underwater vehicle for sonar-based mine detection. First place, 2025 cohort.</p>
+        </div>
+
       </div>
-      <div class="row-links">
-        <a href="paged-inference/index.html">Read the full writeup →</a>
-        <a href="https://github.com/VrajPatel105/paged-inference-engine" target="_blank" rel="noopener">Repository →</a>
+    </section>
+
+    <section id="experience">
+      <div class="section-head"><h2>03 &nbsp;Experience</h2></div>
+
+      <div class="entries">
+
+        <div class="entry">
+          <div class="entry-head">
+            <span class="entry-title">ML Engineer Intern — Fleet Robotics</span>
+            <span class="entry-when">Summer 2026</span>
+          </div>
+          <p class="entry-desc">Diagnosed and corrected a simulation-to-reality heading-drift discrepancy in a MuJoCo robotics RL policy, validated against real robot runs. Retrained a SAC policy on an existing production policy. Built AWS and Snowflake data pipelines and Streamlit dashboards turning raw robot telemetry into engineering insight. Worked inside a large production codebase and presented findings to both technical and non-technical stakeholders.</p>
+        </div>
+
+        <div class="entry">
+          <div class="entry-head">
+            <span class="entry-title">Research Software Engineering Intern — SMAST</span>
+            <span class="entry-when">Sept–Nov 2025</span>
+          </div>
+          <p class="entry-desc">Refactored an R codebase for a NOAA-funded offshore-wind and fishery-survey project. Implemented parallel processing for a 2x speedup on spatial simulations, and packaged an R helper library for reuse across the group.</p>
+        </div>
+
+        <div class="entry">
+          <div class="entry-head">
+            <span class="entry-title">Data Science Intern — SMAST</span>
+            <span class="entry-when">May–Aug 2025</span>
+          </div>
+          <p class="entry-desc">Automated analysis of 38 years of estuary data across 7 sites. Built PowerQuery ETL pipelines that cut report turnaround from three weeks to ten minutes.</p>
+        </div>
+
       </div>
-    </div>
+    </section>
 
-    <div class="row">
-      <div class="row-head">
-        <span class="row-title">cpp-gpu-inference — an end-to-end GPU inference stack</span>
+    <section id="writing">
+      <div class="section-head"><h2>04 &nbsp;Writing</h2></div>
+
+      <div class="entries">
+
+        <a class="entry" href="paged-inference/index.html">
+          <div class="entry-head">
+            <span class="entry-title">Building a paged inference engine from scratch, and measuring it honestly</span>
+            <span class="entry-when">August 2026</span>
+          </div>
+          <p class="entry-desc">A paged KV cache, continuous batching scheduler, a FlashAttention-2 kernel rewritten for block-based paging, and INT8 KV cache quantization, benchmarked against a naive sequential baseline. Includes the concurrency sweep where naive wins, and why.</p>
+          <div class="entry-links"><span>Read →</span></div>
+        </a>
+
+        <a class="entry" href="gpu-inference/index.html">
+          <div class="entry-head">
+            <span class="entry-title">Building a GPU inference stack from scratch, and measuring it honestly</span>
+            <span class="entry-when">August 2026</span>
+          </div>
+          <p class="entry-desc">FlashAttention-2 in Triton, INT8 post-training quantization, a tiled matmul against <span class="tt-none">cuBLAS</span>, and CUDA fundamentals profiled with Nsight Compute. Full tables, the hardware each number came from, and the places the from-scratch version loses to the production baseline.</p>
+          <div class="entry-links"><span>Read →</span></div>
+        </a>
+
+        <a class="entry" href="transformer-trace/index.html">
+          <div class="entry-head">
+            <span class="entry-title">I Built a Transformer From Scratch. Here's the Shape Trace Nobody Shows You.</span>
+            <span class="entry-when">April 2026</span>
+          </div>
+          <p class="entry-desc">A full forward pass through a real encoder-decoder Transformer, traced at the tensor level. Every reshape, matmul, and softmax, with actual numbers at each step.</p>
+          <div class="entry-links"><span>Read →</span></div>
+        </a>
+
       </div>
-      <p class="row-desc">CUDA and Triton kernels, FlashAttention-2 forward and backward written from scratch and wrapped in a custom <code>torch.autograd.Function</code>, and an LLM.int8()-style INT8 post-training quantizer — each one benchmarked against the production library it replaces (cuBLAS, PyTorch SDPA, bitsandbytes) rather than against itself. Profiled with Nsight Compute to confirm the intended mechanism actually fired at hardware level, not just that the wall clock moved.</p>
-      <div class="row-stats">
-        <span><b>46.4%</b> static memory cut vs bitsandbytes' 29.3%</span>
-        <span><b>60.3%</b> of FP32 peak, Triton matmul at 2048</span>
-        <span><b>43.13% → 3.36%</b> L1TEX coalescing gap closed by tiling</span>
+    </section>
+
+    <section id="notes">
+      <div class="section-head"><h2>05 &nbsp;Notes</h2><span class="section-sub tt-none">Study notes written while learning</span></div>
+
+      <p class="notes-tagline">Notes I've written while working through this material.</p>
+
+      <div class="notes">
+        <a class="note" href="notes/ann.pdf" target="_blank" rel="noopener">
+          <span class="note-title">Artificial Neural Networks</span>
+          <span class="note-sub">Deep Learning · Foundations</span>
+          <span class="note-badge">PDF</span>
+        </a>
+        <a class="note" href="notes/optimizing-nn.pdf" target="_blank" rel="noopener">
+          <span class="note-title">Optimizing Neural Networks</span>
+          <span class="note-sub">Deep Learning · Optimization</span>
+          <span class="note-badge">PDF</span>
+        </a>
+        <a class="note" href="notes/cnn.pdf" target="_blank" rel="noopener">
+          <span class="note-title">Deep Learning for Computer Vision</span>
+          <span class="note-sub">Computer Vision · CNN</span>
+          <span class="note-badge">PDF</span>
+        </a>
+        <a class="note" href="notes/rnn.pdf" target="_blank" rel="noopener">
+          <span class="note-title">Recurrent Neural Networks</span>
+          <span class="note-sub">Sequence Models · RNN</span>
+          <span class="note-badge">PDF</span>
+        </a>
+        <a class="note" href="notes/encoder-decoder.pdf" target="_blank" rel="noopener">
+          <span class="note-title">Encoder–Decoder Mechanism</span>
+          <span class="note-sub">Transformers · Architecture</span>
+          <span class="note-badge">PDF</span>
+        </a>
+        <a class="note" href="notes/transformer.pdf" target="_blank" rel="noopener">
+          <span class="note-title">Transformer Architecture</span>
+          <span class="note-sub">Transformers · Full Architecture</span>
+          <span class="note-badge">PDF</span>
+        </a>
       </div>
-      <div class="row-links">
-        <a href="gpu-inference/index.html">Read the full writeup →</a>
-        <a href="https://github.com/VrajPatel105/cpp-gpu-inference" target="_blank" rel="noopener">Repository →</a>
-      </div>
-    </div>
+    </section>
 
-    <div class="row">
-      <div class="row-head">
-        <span class="row-title">en-de-transformer — encoder-decoder from scratch in PyTorch</span>
-      </div>
-      <p class="row-desc">6 encoder and 6 decoder blocks, 8 attention heads, d_model 512, trained on 200K Tatoeba English–German pairs. This is the substrate the FlashAttention-2 kernel and the INT8 quantizer were integrated into and measured on — a real model rather than a synthetic benchmark harness.</p>
-      <div class="row-links">
-        <a href="https://github.com/VrajPatel105/cpp-gpu-inference/tree/main/en-de-transformer" target="_blank" rel="noopener">Repository →</a>
-        <a href="transformer-trace/index.html">Shape trace writeup →</a>
-      </div>
-    </div>
+  </main>
 
-    <div class="row">
-      <div class="row-head">
-        <span class="row-title">CMVS — simulated autonomous UUV for sonar mine detection</span>
-        <span class="row-when">2025</span>
-      </div>
-      <p class="row-desc">Blue Tech Externship with Courage Builder. Simulated autonomous underwater vehicle for sonar-based mine detection. First place, 2025 cohort.</p>
-    </div>
-
-  </div>
-
-  <div class="head"><span><b>03</b> &nbsp;Experience</span></div>
-
-  <div class="rows">
-
-    <div class="row">
-      <div class="row-head">
-        <span class="row-title">ML Engineer Intern — Fleet Robotics</span>
-        <span class="row-when">Summer 2026</span>
-      </div>
-      <p class="row-desc">Diagnosed and corrected a simulation-to-reality heading-drift discrepancy in a MuJoCo robotics RL policy, validated against real robot runs. Retrained a SAC policy on an existing production policy. Built AWS and Snowflake data pipelines and Streamlit dashboards turning raw robot telemetry into engineering insight. Worked inside a large production codebase and presented findings to both technical and non-technical stakeholders.</p>
-    </div>
-
-    <div class="row">
-      <div class="row-head">
-        <span class="row-title">Research Software Engineering Intern — SMAST</span>
-        <span class="row-when">Sept–Nov 2025</span>
-      </div>
-      <p class="row-desc">Refactored an R codebase for a NOAA-funded offshore-wind and fishery-survey project. Implemented parallel processing for a 2x speedup on spatial simulations, and packaged an R helper library for reuse across the group.</p>
-    </div>
-
-    <div class="row">
-      <div class="row-head">
-        <span class="row-title">Data Science Intern — SMAST</span>
-        <span class="row-when">May–Aug 2025</span>
-      </div>
-      <p class="row-desc">Automated analysis of 38 years of estuary data across 7 sites. Built PowerQuery ETL pipelines that cut report turnaround from three weeks to ten minutes.</p>
-    </div>
-
-  </div>
-
-  <div class="head"><span><b>04</b> &nbsp;Writing</span></div>
-
-  <div class="rows">
-
-    <a class="row" href="paged-inference/index.html">
-      <div class="row-head">
-        <span class="row-title">Building a paged inference engine from scratch, and measuring it honestly</span>
-        <span class="row-when">August 2026</span>
-      </div>
-      <p class="row-desc">A paged KV cache, continuous batching scheduler, a FlashAttention-2 kernel rewritten for block-based paging, and INT8 KV cache quantization, benchmarked against a naive sequential baseline. Includes the concurrency sweep where naive wins, and why.</p>
-      <div class="row-links"><span>Read →</span></div>
-    </a>
-
-    <a class="row" href="gpu-inference/index.html">
-      <div class="row-head">
-        <span class="row-title">Building a GPU inference stack from scratch, and measuring it honestly</span>
-        <span class="row-when">August 2026</span>
-      </div>
-      <p class="row-desc">FlashAttention-2 in Triton, INT8 post-training quantization, a tiled matmul against <span class="tt-none">cuBLAS</span>, and CUDA fundamentals profiled with Nsight Compute. Full tables, the hardware each number came from, and the places the from-scratch version loses to the production baseline.</p>
-      <div class="row-links"><span>Read →</span></div>
-    </a>
-
-    <a class="row" href="transformer-trace/index.html">
-      <div class="row-head">
-        <span class="row-title">I Built a Transformer From Scratch. Here's the Shape Trace Nobody Shows You.</span>
-        <span class="row-when">April 2026</span>
-      </div>
-      <p class="row-desc">A full forward pass through a real encoder-decoder Transformer, traced at the tensor level. Every reshape, matmul, and softmax, with actual numbers at each step.</p>
-      <div class="row-links"><span>Read →</span></div>
-    </a>
-
-  </div>
-
-  <div class="head"><span><b>05</b> &nbsp;Notes</span><span class="tt-none">Study notes written while learning</span></div>
-
-  <p class="notes-tagline">Notes I've written while working through this material.</p>
-
-  <div class="notes">
-    <a class="note" href="notes/ann.pdf" target="_blank" rel="noopener">
-      <span class="note-title">Artificial Neural Networks</span>
-      <span class="note-sub">Deep Learning · Foundations</span>
-      <span class="note-badge">PDF</span>
-    </a>
-    <a class="note" href="notes/optimizing-nn.pdf" target="_blank" rel="noopener">
-      <span class="note-title">Optimizing Neural Networks</span>
-      <span class="note-sub">Deep Learning · Optimization</span>
-      <span class="note-badge">PDF</span>
-    </a>
-    <a class="note" href="notes/cnn.pdf" target="_blank" rel="noopener">
-      <span class="note-title">Deep Learning for Computer Vision</span>
-      <span class="note-sub">Computer Vision · CNN</span>
-      <span class="note-badge">PDF</span>
-    </a>
-    <a class="note" href="notes/rnn.pdf" target="_blank" rel="noopener">
-      <span class="note-title">Recurrent Neural Networks</span>
-      <span class="note-sub">Sequence Models · RNN</span>
-      <span class="note-badge">PDF</span>
-    </a>
-    <a class="note" href="notes/encoder-decoder.pdf" target="_blank" rel="noopener">
-      <span class="note-title">Encoder–Decoder Mechanism</span>
-      <span class="note-sub">Transformers · Architecture</span>
-      <span class="note-badge">PDF</span>
-    </a>
-    <a class="note" href="notes/transformer.pdf" target="_blank" rel="noopener">
-      <span class="note-title">Transformer Architecture</span>
-      <span class="note-sub">Transformers · Full Architecture</span>
-      <span class="note-badge">PDF</span>
-    </a>
-  </div>
-
-  <footer>Built with plain HTML. Hosted on GitHub Pages.</footer>
+  <footer class="site-footer">Built with plain HTML. Hosted on GitHub Pages.</footer>
 
 </div>
+
+<script>
+(function(){
+  var links = Array.prototype.slice.call(document.querySelectorAll('.side-nav a'));
+  if(!('IntersectionObserver' in window) || !links.length) return;
+  var sections = links
+    .map(function(a){ return document.querySelector(a.getAttribute('href')); })
+    .filter(Boolean);
+  var observer = new IntersectionObserver(function(entries){
+    entries.forEach(function(entry){
+      if(!entry.isIntersecting) return;
+      var link = document.querySelector('.side-nav a[href="#' + entry.target.id + '"]');
+      if(!link) return;
+      links.forEach(function(l){ l.classList.remove('active'); });
+      link.classList.add('active');
+    });
+  }, { rootMargin: '-15% 0px -70% 0px' });
+  sections.forEach(function(s){ observer.observe(s); });
+})();
+</script>
 </body>
 </html>
