@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Building a paged inference engine from scratch — Vraj Patel</title>
+
+<meta name="description" content="A mini LLM inference server built from scratch: paged KV cache, continuous batching scheduler, a FlashAttention-2 kernel rewritten for block-based paging, and INT8 KV cache quantization. Full throughput tables against a naive baseline, including where the naive version wins.">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Building a paged inference engine from scratch, and measuring it honestly">
+<meta property="og:description" content="A paged KV cache, continuous batching scheduler, a custom Triton attention kernel rewritten for paging, and INT8 KV cache quantization, benchmarked against a naive sequential baseline at every concurrency level tested.">
+<meta property="og:url" content="https://vrajpatel105.github.io/paged-inference/">
+<meta name="twitter:card" content="summary">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+<style>
+  :root{
+    --canvas:#fafaf9;
+    --ink:#16181a;
+    --ink-2:#494c4f;
+    --ink-3:#7b7e81;
+    --line:#e2e1de;
+    --line-2:#cfcecb;
+    --fill:#eeedea;
+
+    /* two data roles, used consistently across every chart and table */
+    --mine:#16181a;
+    --theirs:#c2c1bd;
+
+    --link:#3d3a8c;
+    --mono:'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  html{-webkit-text-size-adjust:100%}
+
+  body{
+    background:var(--canvas);
+    color:var(--ink);
+    font-family:var(--mono);
+    font-size:13px;
+    line-height:1.5;
+    letter-spacing:-0.02em;
+    font-feature-settings:'tnum' 1,'zero' 1;
+    -webkit-font-smoothing:antialiased;
+  }
+
+  .wrap{max-width:940px;margin:0 auto;padding:36px 24px 90px}
+
+  a{color:var(--link)}
+  a:focus-visible{outline:2px solid var(--link);outline-offset:3px;border-radius:2px}
+  code{font-family:inherit;font-size:1em;background:var(--fill);padding:0 4px}
+
+  .back{font-size:11px;text-decoration:none;display:inline-block;margin-bottom:26px}
+  .back:hover{text-decoration:underline}
+
+  h1{font-size:1.55rem;font-weight:600;letter-spacing:-0.045em;line-height:1.18;margin-bottom:14px;max-width:34ch}
+  .standfirst{font-size:13.5px;line-height:1.6;color:var(--ink-2);max-width:74ch;margin-bottom:18px}
+  .byline{font-size:10.5px;letter-spacing:0.08em;text-transform:uppercase;color:var(--ink-3);padding-bottom:14px;border-bottom:1px solid var(--ink)}
+
+  .head{
+    display:flex;justify-content:space-between;align-items:baseline;gap:14px;
+    font-size:10.5px;letter-spacing:0.08em;text-transform:uppercase;
+    color:var(--ink-3);padding:10px 0;border-bottom:1px solid var(--ink);
+    margin:48px 0 20px;
+  }
+  .head b{color:var(--ink);font-weight:600}
+  .tt-none{text-transform:none;letter-spacing:-0.01em}
+
+  h3{font-size:13.5px;font-weight:600;letter-spacing:-0.03em;margin:28px 0 10px}
+
+  /* ── prose: mono, set for reading ── */
+  p.t{font-size:13.5px;line-height:1.75;letter-spacing:-0.015em;color:var(--ink-2);max-width:66ch;margin-bottom:15px}
+  p.t b{color:var(--ink);font-weight:600}
+  ul.t{max-width:66ch;margin:0 0 15px 0;list-style:none}
+  ul.t li{font-size:13.5px;line-height:1.7;letter-spacing:-0.015em;color:var(--ink-2);padding-left:18px;position:relative;margin-bottom:9px}
+  ul.t li::before{content:'—';position:absolute;left:0;color:var(--ink-3)}
+  ul.t li b{color:var(--ink);font-weight:600}
+
+  /* ── callout for correction / caveat notices ── */
+  .flag{border:1px solid var(--ink);padding:16px 18px;max-width:74ch;margin-bottom:18px}
+  .flag .flag-h{font-size:10.5px;letter-spacing:0.1em;text-transform:uppercase;color:var(--ink);font-weight:600;margin-bottom:8px}
+  .flag p{font-size:12.5px;line-height:1.65;color:var(--ink-2);margin-bottom:9px}
+  .flag p:last-child{margin-bottom:0}
+  .flag code{background:var(--canvas)}
+
+  /* ── spec block ── */
+  .spec{border-top:1px solid var(--line);margin-bottom:20px;max-width:680px}
+  .spec div{display:flex;gap:16px;padding:6px 0;border-bottom:1px solid var(--line)}
+  .spec dt{flex:0 0 150px;font-size:10.5px;letter-spacing:0.06em;text-transform:uppercase;color:var(--ink-3);padding-top:2px}
+  .spec dd{flex:1;min-width:0;font-size:12.5px;color:var(--ink)}
+
+  /* ── tables ── */
+  .table-wrap{margin-bottom:8px}
+  .table-scroll{
+    overflow-x:auto;-webkit-overflow-scrolling:touch;
+    background:
+      linear-gradient(to right,var(--canvas) 30%,rgba(250,250,249,0)) left center/28px 100% no-repeat local,
+      linear-gradient(to left,var(--canvas) 30%,rgba(250,250,249,0)) right center/28px 100% no-repeat local,
+      radial-gradient(farthest-side at 0 50%,rgba(22,24,26,.16),rgba(22,24,26,0)) left center/12px 100% no-repeat scroll,
+      radial-gradient(farthest-side at 100% 50%,rgba(22,24,26,.16),rgba(22,24,26,0)) right center/12px 100% no-repeat scroll;
+  }
+  table{border-collapse:collapse;width:100%;font-size:12px;background:transparent}
+  caption{text-align:left;font-size:10.5px;color:var(--ink-3);padding-bottom:9px;line-height:1.5;max-width:70ch}
+  th,td{padding:6px 16px;text-align:right;white-space:nowrap}
+  th:first-child,td:first-child{text-align:left;padding-left:0}
+  th:last-child,td:last-child{padding-right:20px}
+  thead th{
+    font-size:10.5px;font-weight:500;letter-spacing:0.02em;
+    color:var(--ink-3);border-bottom:1px solid var(--ink);padding-bottom:7px;
+  }
+  tbody tr{border-bottom:1px solid var(--line)}
+  tbody th{font-weight:500}
+  .c-mine{color:var(--ink);font-weight:600}
+  .c-theirs{color:var(--ink-3)}
+  .scroll-hint{font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:var(--ink-3);margin-bottom:20px}
+
+  /* ── legend ── */
+  .legend{display:flex;gap:18px;flex-wrap:wrap;font-size:11px;letter-spacing:0.01em;color:var(--ink-2);margin-bottom:14px}
+  .legend i{display:inline-block;width:18px;height:9px;margin-right:7px;vertical-align:0}
+  .sw-mine{background:var(--mine)}
+  .sw-theirs{background:var(--theirs);outline:1px solid var(--line-2);outline-offset:-1px}
+
+  /* ── figures ── */
+  figure{margin:0 0 26px}
+  figcaption{font-size:11.5px;line-height:1.6;color:var(--ink-2);margin-top:11px;padding-top:9px;border-top:1px solid var(--line);max-width:80ch}
+  figcaption b{color:var(--ink);font-weight:600}
+  figcaption span.m{color:var(--ink-3)}
+  .chart{display:block;width:100%;height:auto}
+
+  footer{margin-top:44px;padding-top:12px;border-top:1px solid var(--line);font-size:10.5px;letter-spacing:0.08em;text-transform:uppercase;color:var(--ink-3)}
+
+  @media (max-width:640px){
+    .wrap{padding:26px 16px 64px}
+    .spec dt{flex:0 0 112px;font-size:10px}
+    .head{font-size:10px;letter-spacing:0.05em}
+  }
+  @media (prefers-reduced-motion:reduce){
+    *,*::before,*::after{transition:none!important;animation:none!important;scroll-behavior:auto!important}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <a class="back" href="../index.html">← Vraj Patel</a>
+
+  <h1>Building a paged inference engine from scratch, and measuring it honestly</h1>
+  <p class="standfirst">A mini LLM inference server implementing the core ideas behind vLLM: a block-based paged KV cache, a continuous batching scheduler, and a FlashAttention-2 kernel rewritten to read and write through a block table, built without referencing vLLM's source. Every benchmark here ran against a naive sequential baseline, and at the model scale and sequence lengths I tested, the naive version wins on raw throughput. That result, and why, is most of this writeup.</p>
+  <div class="byline">Vraj Patel · August 2026 · <a href="https://github.com/VrajPatel105/paged-inference-engine" target="_blank" rel="noopener" class="tt-none">github.com/VrajPatel105/paged-inference-engine</a></div>
+
+  <div class="head"><span><b>01</b> &nbsp;What this is</span></div>
+
+  <p class="t">This is a self-directed, roughly 3-week build of a mini LLM inference server, implementing the core mechanisms behind vLLM: a block-based KV cache allocator, a continuous batching scheduler, a FlashAttention-2 kernel rewritten to read and write through a block table instead of contiguous per-sequence buffers, and INT8 KV cache quantization on top of all of it. I didn't look at vLLM's source while building this. Working out the mechanisms myself is where the actual understanding is, and it's the only way I'd know for certain what my version does and doesn't handle.</p>
+
+  <p class="t">The rule for the benchmarks was the same one I used on my last GPU project: compare against something real, not against a worse version of yourself. Here that meant a naive baseline: no KV cache reuse, no batching, one request processed fully at a time, representing what you get with zero serving infrastructure. The honest result is that at the scale I tested, the naive baseline wins on throughput. I'm reporting that number and explaining why it happens, rather than picking a workload that flatters the paged engine.</p>
+
+  <h3>Environment</h3>
+  <dl class="spec">
+    <div><dt>Hardware</dt><dd>NVIDIA RTX 5080 Laptop, 16 GB VRAM, CUDA 12.9</dd></div>
+    <div><dt>OS</dt><dd>WSL2 Ubuntu on Windows</dd></div>
+    <div><dt>Stack</dt><dd>PyTorch, Triton for the custom attention kernel</dd></div>
+    <div><dt>Build time</dt><dd>~3 weeks, self-directed</dd></div>
+  </dl>
+
+  <div class="head"><span><b>02</b> &nbsp;Block allocator and continuous batching scheduler</span></div>
+
+  <p class="t">The first piece is <code>BlockManager</code> (<code>core/block_manager.py</code>): a fixed-size pool of KV cache blocks with <code>allocate</code>, <code>release_blocks</code>, <code>num_free_blocks</code>, and <code>can_allocate</code>. Every sequence's KV cache lives across some number of these blocks instead of one contiguous buffer, which is the actual mechanism paging is named after. I tested it with interleaved-sequence correctness tests: allocate and free sequences in overlapping, out-of-order patterns and check that the free-block count and block ownership stay consistent throughout, not just at the end.</p>
+
+  <p class="t">On top of that sits the scheduler (<code>core/scheduler.py</code>, <code>core/sequence.py</code>). <code>Sequence</code> tracks <code>seq_id</code>, <code>prompt_token_ids</code>, <code>token_ids</code>, and <code>is_finished</code>. <code>Scheduler.schedule()</code> runs four phases every call: <code>_free_finished</code> releases blocks for sequences that finished last step, <code>_allocate_decode</code> grows the block allocation for sequences still generating, <code>_admit_waiting</code> decides which queued requests get to start, and <code>_build_output</code> assembles the batch for this step. Whether a sequence is doing prefill or decode isn't stored as a flag anywhere. It's derived on the fly by comparing token counts, which keeps the state machine smaller at the cost of recomputing that comparison every call.</p>
+
+  <p class="t">Admission has two modes. A skip-threshold mode blocks all new admissions until enough blocks are free, simple but can leave the GPU underutilized while waiting on one large request's blocks. A normal mode uses a lookahead window: if the sequence at the front of the queue doesn't fit right now, the scheduler can look past it and admit a smaller one instead, packing multiple admissions into a single call rather than stalling on the head of the line.</p>
+
+  <div class="head"><span><b>03</b> &nbsp;FlashAttention-2 kernel rewrite for paging</span><span class="tt-none">RTX 5080 Laptop</span></div>
+
+  <p class="t">I had a standalone FA-2 kernel in Triton from an earlier project, the same one benchmarked in my prior GPU-inference writeup. Paging meant it could no longer assume each sequence's K/V lived in one contiguous buffer, so I rewrote the block-reading logic: new kernel parameters <code>block_table</code>, <code>num_blocks_per_seq</code>, <code>q_len_per_seq</code>, <code>kv_len_per_seq</code>, and <code>block_size</code>, with the inner loop now walking a sequence's block table to find where its K/V actually live in the pool instead of indexing a contiguous range.</p>
+
+  <div class="table-wrap">
+    <div class="table-scroll">
+      <table>
+        <caption>Correctness against <code>torch.nn.functional.scaled_dot_product_attention</code> · fp16 · 3 sequences of different lengths, block assignments scrambled to be non-contiguous</caption>
+        <thead>
+          <tr><th scope="col">Check</th><th scope="col">Result</th></tr>
+        </thead>
+        <tbody>
+          <tr><th scope="row">Max abs diff</th><td>~0.001</td></tr>
+          <tr><th scope="row">Verdict</th><td>Matches within fp16 precision</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <p class="t">Scrambling the block assignment mattered. A kernel that only gets tested on blocks laid out in allocation order tells you whether contiguous memory access works, which was never in question. It doesn't tell you whether the block-table indexing itself is correct.</p>
+
+  <div class="head"><span><b>04</b> &nbsp;Transformer surgery and the engine loop</span></div>
+
+  <p class="t">The model is a decoder-only transformer, stripped down from an encoder-decoder transformer I built for an earlier project (<a href="https://github.com/VrajPatel105/cpp-gpu-inference/tree/main/en-de-transformer" target="_blank" rel="noopener" class="tt-none">cpp-gpu-inference/en-de-transformer</a>): encoder and cross-attention removed. <code>MultiHeadAttention.forward</code> now writes new K/V into per-layer <code>k_cache</code>/<code>v_cache</code> buffers, registered with <code>register_buffer</code> at shape <code>[num_blocks, num_heads, block_size, d_k]</code>, and calls the paged FA-2 kernel instead of the plain <code>torch.cat</code>-based KV cache from the earlier project.</p>
+
+  <p class="t">The model runner (<code>core/model_runner.py</code>) is the loop tying everything together: drain the request queue, wrap each request in a <code>Sequence</code>, call <code>scheduler.schedule()</code>, and batch whatever it returns into one flat packed tensor for the step, prefill and decode sequences together, rather than a padded rectangular batch. One forward pass, then each sequence's last-token logits get pulled out with vectorized indexing, argmax'd, and the new tokens get written back.</p>
+
+  <div class="flag">
+    <div class="flag-h">A same-step bug worth mentioning</div>
+    <p>Sequences now stop and free their blocks as soon as they emit an EOS token, instead of always running to <code>max_len</code>. Implementing that surfaced an off-by-one: the batch index was only incremented inside the non-EOS branch, so a sequence hitting EOS mid-step would leave the index pointing at the wrong row for the rest of that step.</p>
+    <p>Fixed by incrementing the index unconditionally, outside the branch.</p>
+  </div>
+
+  <div class="head"><span><b>05</b> &nbsp;INT8 KV cache quantization</span></div>
+
+  <p class="t">The last major piece. Granularity is per-block-per-head, symmetric quantization with no zero-point. The design I've been calling "B-approximate": the cache is int8 from the very first token, never staged in fp16 and quantized later. On every new token write, the block's existing filled entries get dequantized using the stored scale, the new token's real K/V gets appended, a new max-abs-based scale is recomputed over the whole set, and everything gets requantized back to int8 and written back along with the new scale.</p>
+
+  <p class="t">On the read side, the Triton kernel loads the int8 tile and its per-block-per-head scale scalar, and dequantizes by casting and multiplying immediately before each of the two <code>tl.dot</code> calls: the QK^T and the post-softmax value aggregation.</p>
+
+  <h3>Correctness validation</h3>
+
+  <p class="t">I ran the same 4 prompts through the live demo on two checkpoints: an FP16-only build from a commit before quantization existed, and the INT8 version. Both produced identical degenerate output, the model repeating "day day day the day the..." for all 4 prompts. That's the result I wanted. It means the quantization write and read path is mathematically correct and behaves identically to FP16, not that quantization broke something.</p>
+
+  <p class="t">The repetition itself is unrelated to quantization. It's what you get from a small, lightly trained demo model under greedy argmax decoding, and fixing that wasn't in scope here, the point was serving infrastructure, not model quality. The identical-output test is exactly the kind of check that tells the two apart: if quantization had introduced a bug, the two checkpoints would most likely have diverged, not failed in the exact same way.</p>
+
+  <div class="head"><span><b>06</b> &nbsp;Benchmarking methodology</span></div>
+
+  <p class="t"><code>bench/benchmark.py</code> is a standalone module. It doesn't import from <code>train.py</code> or <code>model_runner.py</code>, so a change to the serving code can't silently change what the benchmark measures.</p>
+
+  <p class="t">The baseline is the original non-paged decoder-only transformer: plain <code>scaled_dot_product_attention</code>, no KV cache reuse, the full growing sequence reprocessed every decode step, one request run fully sequentially at a time. That's meant to represent the floor: what you get with no serving infrastructure at all.</p>
+
+  <p class="t">TTFT (time to first token, prefill latency) and TPOT (time per output token, average decode step latency) are both measured with <code>torch.cuda.synchronize()</code> wrapping the timed region, to avoid timing CUDA's async dispatch instead of the actual work. I also measured aggregate throughput (total tokens generated / total wall time) across a concurrency sweep, and attempted a memory-ceiling test: the max concurrent sequences each approach could hold before OOM.</p>
+
+  <p class="t">Warmup runs before timing starts mattered more than I expected. Without them, one-time CUDA and Triton kernel compilation gets counted as request latency. Paged TTFT measured <b>~1100ms before adding warmup, and ~69ms after</b>, a compile-cost artifact, not anything close to the real per-request cost.</p>
+
+  <div class="head"><span><b>07</b> &nbsp;Throughput sweep</span><span class="tt-none">RTX 5080 Laptop</span></div>
+
+  <div class="legend">
+    <span><i class="sw-mine"></i>Paged — mine</span>
+    <span><i class="sw-theirs"></i>Naive sequential — baseline</span>
+  </div>
+
+  <div class="table-wrap">
+    <div class="table-scroll">
+      <table>
+        <caption>Aggregate throughput, tokens/sec · concurrency sweep · max_len 50 tokens · RTX 5080 Laptop</caption>
+        <thead>
+          <tr><th scope="col">Concurrency</th><th scope="col">Naive tok/s</th><th scope="col">Paged tok/s</th></tr>
+        </thead>
+        <tbody>
+          <tr><th scope="row">1</th><td class="c-theirs">491</td><td class="c-mine">95</td></tr>
+          <tr><th scope="row">4</th><td class="c-theirs">542</td><td class="c-mine">152</td></tr>
+          <tr><th scope="row">8</th><td class="c-theirs">550</td><td class="c-mine">166</td></tr>
+          <tr><th scope="row">16</th><td class="c-theirs">542</td><td class="c-mine">173</td></tr>
+          <tr><th scope="row">32</th><td class="c-theirs">543</td><td class="c-mine">176</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <p class="t">Naive stays flat, roughly 530-550 tok/s, regardless of concurrency. That's expected: it's fully sequential, so there's no batching interaction for concurrency to help with. Paged throughput climbs with concurrency but plateaus, and it never crosses naive's throughput anywhere in the tested range.</p>
+
+  <figure>
+    <svg class="chart" viewBox="0 0 720 300" role="img" aria-label="Grouped bar chart of paged versus naive aggregate throughput at concurrency 1, 4, 8, 16 and 32. Paged reaches 95, 152, 166, 173 and 176 tokens per second. Naive reaches 491, 542, 550, 542 and 543. Naive stays roughly flat across all five concurrency levels. Paged climbs steadily but plateaus after 16 and never crosses naive at any tested concurrency.">
+      <g font-family="'IBM Plex Mono', monospace" font-size="10" fill="#7b7e81">
+        <g stroke="#e2e1de" stroke-width="1">
+          <line x1="56" y1="240" x2="700" y2="240"/>
+          <line x1="56" y1="170" x2="700" y2="170"/>
+          <line x1="56" y1="100" x2="700" y2="100"/>
+          <line x1="56" y1="30"  x2="700" y2="30"/>
+        </g>
+        <text x="48" y="243.5" text-anchor="end">0</text>
+        <text x="48" y="173.5" text-anchor="end">200</text>
+        <text x="48" y="103.5" text-anchor="end">400</text>
+        <text x="48" y="33.5" text-anchor="end">600</text>
+        <text x="56" y="286" font-size="9" letter-spacing="1">CONCURRENCY (N)</text>
+        <text x="700" y="286" font-size="9" letter-spacing="1" text-anchor="end">TOK/S</text>
+      </g>
+
+      <g>
+        <rect x="78.4"  y="206.75" width="40" height="33.25"  fill="#16181a"/>
+        <rect x="122.4" y="68.15"  width="40" height="171.85" fill="#c2c1bd"/>
+        <rect x="207.2" y="186.8"  width="40" height="53.2"   fill="#16181a"/>
+        <rect x="251.2" y="50.3"   width="40" height="189.7"  fill="#c2c1bd"/>
+        <rect x="336"   y="181.9"  width="40" height="58.1"   fill="#16181a"/>
+        <rect x="380"   y="47.5"   width="40" height="192.5"  fill="#c2c1bd"/>
+        <rect x="464.8" y="179.45" width="40" height="60.55"  fill="#16181a"/>
+        <rect x="508.8" y="50.3"   width="40" height="189.7"  fill="#c2c1bd"/>
+        <rect x="593.6" y="178.4"  width="40" height="61.6"   fill="#16181a"/>
+        <rect x="637.6" y="49.95"  width="40" height="190.05" fill="#c2c1bd"/>
+      </g>
+
+      <g font-family="'IBM Plex Mono', monospace" font-size="9.5" text-anchor="middle">
+        <text x="98.4"  y="201" fill="#16181a" font-weight="600">95</text>
+        <text x="142.4" y="62"  fill="#7b7e81">491</text>
+        <text x="227.2" y="181" fill="#16181a" font-weight="600">152</text>
+        <text x="271.2" y="44"  fill="#7b7e81">542</text>
+        <text x="356"   y="176" fill="#16181a" font-weight="600">166</text>
+        <text x="400"   y="42"  fill="#7b7e81">550</text>
+        <text x="484.8" y="173" fill="#16181a" font-weight="600">173</text>
+        <text x="528.8" y="44"  fill="#7b7e81">542</text>
+        <text x="613.6" y="172" fill="#16181a" font-weight="600">176</text>
+        <text x="657.6" y="44"  fill="#7b7e81">543</text>
+      </g>
+
+      <line x1="56" y1="240" x2="700" y2="240" stroke="#16181a" stroke-width="1"/>
+      <g font-family="'IBM Plex Mono', monospace" font-size="11" fill="#16181a" text-anchor="middle">
+        <text x="120.4" y="257">1</text>
+        <text x="249.2" y="257">4</text>
+        <text x="378"   y="257">8</text>
+        <text x="506.8" y="257">16</text>
+        <text x="635.6" y="257">32</text>
+      </g>
+    </svg>
+    <figcaption><b>Paged throughput climbs with concurrency but never catches naive.</b> 95→152→166→173→176 tok/s from N=1 to N=32, a real trend, batching is doing something, but the gain from N=16 to N=32 is nearly nothing, and naive's flat ~530-550 tok/s stays out of reach across the whole sweep.</figcaption>
+  </figure>
+
+  <p class="t"><b>Honest interpretation.</b> At this model size (small, from-scratch transformer) and these sequence lengths (roughly 50-95 tokens), the paged engine's fixed per-step overhead, Triton kernel launch, Python-side block table construction, query padding and unpadding, isn't amortized enough yet to beat a dead-simple sequential loop. That's a real and expected finding for infrastructure at small scale: paging and batching pay off once the workload is large enough that the problems they solve, no batching at all, memory fragmentation, requests blocking each other, actually start to hurt. Naive never gets stressed by this workload. It isn't memory-constrained, and nothing forces it to serialize in a way that costs it anything.</p>
+
+  <div class="head"><span><b>08</b> &nbsp;Memory ceiling test</span><span class="tt-none">RTX 5080 Laptop</span></div>
+
+  <p class="t">Attempted to find the max concurrent sequences each approach could hold before OOM.</p>
+
+  <div class="table-wrap">
+    <div class="table-scroll">
+      <table>
+        <caption>Memory ceiling test · RTX 5080 Laptop, 16 GB VRAM · WSL2 Ubuntu</caption>
+        <thead>
+          <tr><th scope="col">Approach</th><th scope="col">Outcome</th><th scope="col">Reported peak memory</th></tr>
+        </thead>
+        <tbody>
+          <tr><th scope="row">Naive</th><td class="c-theirs">Reached test ceiling (n=128), no OOM</td><td class="c-theirs">~9.4 GB</td></tr>
+          <tr><th scope="row">Paged</th><td class="c-mine">OOM at n=80</td><td class="c-mine">~32 GB at n=64, last successful point</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="flag">
+    <div class="flag-h">Why I'm not reporting a paged max-concurrency number as fact</div>
+    <p>The peak memory figure reported at the last successful point (n=64) was approximately 32 GB, on a 16 GB GPU. That isn't physically possible, so the number is wrong somewhere, not a real measurement of paged's memory ceiling.</p>
+    <p>Traced it to WSL2: CUDA allocations there can spill into a shared virtual memory pool backed by system RAM instead of failing cleanly at the real VRAM limit, which means <code>torch.cuda.max_memory_allocated()</code> isn't trustworthy for physical GPU capacity in this environment.</p>
+    <p>I could chase this down with an <code>nvidia-smi</code>-based measurement instead. I decided to report it honestly as inconclusive rather than publish a number I already know is wrong, given the throughput and TTFT/TPOT results above don't depend on it and stand on their own.</p>
+  </div>
+
+  <h3>Two real bugs found along the way</h3>
+  <ul class="t">
+    <li><b><code>num_blocks</code> was set to 10000</b> (block_size=64, 6 decoder layers), which pre-allocates a large fixed KV cache pool, about 3.75 GB, at model construction time regardless of how many sequences are actually active. That's a real fixed cost of block-based paging worth knowing about, and it skewed early memory comparisons until I accounted for it.</li>
+    <li><b>Both models were staying resident on GPU at the same time</b> during testing, naive and paged loaded together, which confounded early memory results. Fixed by explicitly freeing the naive model between test phases.</li>
+  </ul>
+
+  <div class="head"><span><b>09</b> &nbsp;Scope explicitly not covered (v1)</span></div>
+
+  <ul class="t">
+    <li><b>No CPU offloading or recomputation-on-eviction.</b> When memory runs out, the scheduler just blocks and waits for blocks to free up.</li>
+    <li><b>No speculative decoding, no beam search.</b> Greedy argmax decoding only.</li>
+    <li><b>Model quality was never a goal here.</b> The demo model is small and lightly trained on purpose. The repetitive output is expected and orthogonal to whether the serving infrastructure is correct.</li>
+  </ul>
+
+  <div class="head"><span><b>10</b> &nbsp;Open items</span></div>
+
+  <p class="t">Stated plainly, because a list of finished things with no unfinished things next to it isn't credible.</p>
+  <ul class="t">
+    <li><b>Re-measure the memory ceiling</b> with an <code>nvidia-smi</code>-based check instead of <code>torch.cuda.max_memory_allocated()</code>, ideally outside WSL2, so max concurrent sequences is a number I can actually stand behind.</li>
+    <li><b>Test at a larger model and longer sequence lengths.</b> The current results say paging's fixed per-step overhead isn't amortized yet at this scale. They don't say whether it ever crosses over, and that needs a bigger workload to answer.</li>
+    <li><b>Reduce the fixed per-step overhead itself</b>, Triton kernel launch, Python-side block table construction, query padding and unpadding, since that's what's standing between paged and naive at every concurrency I tested.</li>
+    <li><b>CPU offloading, recomputation-on-eviction, speculative decoding, beam search.</b> Not started.</li>
+  </ul>
+
+  <div class="head"><span><b>11</b> &nbsp;Reproduce it</span></div>
+
+  <p class="t">Everything is in <a href="https://github.com/VrajPatel105/paged-inference-engine" target="_blank" rel="noopener" class="tt-none">github.com/VrajPatel105/paged-inference-engine</a>. The files that map to the sections above:</p>
+
+  <div class="table-wrap">
+    <div class="table-scroll">
+      <table>
+        <caption>File map</caption>
+        <thead><tr><th scope="col">Section</th><th scope="col">File</th></tr></thead>
+        <tbody>
+          <tr><th scope="row">Block allocator</th><td><code>core/block_manager.py</code></td></tr>
+          <tr><th scope="row">Scheduler</th><td><code>core/scheduler.py</code>, <code>core/sequence.py</code></td></tr>
+          <tr><th scope="row">Paged FlashAttention-2 kernel</th><td><code>kernels/flash_attention.py</code></td></tr>
+          <tr><th scope="row">Model runner / engine loop</th><td><code>core/model_runner.py</code></td></tr>
+          <tr><th scope="row">Benchmarking</th><td><code>bench/benchmark.py</code></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <p class="t">The transformer this engine serves is the same decoder-only model described in section 04, stripped from <a href="https://github.com/VrajPatel105/cpp-gpu-inference/tree/main/en-de-transformer" target="_blank" rel="noopener" class="tt-none">cpp-gpu-inference/en-de-transformer</a>.</p>
+
+  <footer>
+    <a href="../index.html">← Back to Vraj Patel</a> &nbsp;·&nbsp; Built with plain HTML. Hosted on GitHub Pages.
+  </footer>
+
+</div>
+</body>
+</html>

@@ -184,6 +184,23 @@
 
     <div class="row row-lead">
       <div class="row-head">
+        <span class="row-title">paged-inference-engine — a mini vLLM-style inference server</span>
+        <span class="row-when">August 2026</span>
+      </div>
+      <p class="row-desc">A block-based paged KV cache, a continuous batching scheduler, a FlashAttention-2 Triton kernel rewritten to read and write through a block table, and INT8 KV cache quantization, all built without referencing vLLM's source. Benchmarked against a naive sequential baseline across a concurrency sweep; at this model's scale the naive baseline wins on throughput, and the writeup explains why rather than hiding it.</p>
+      <div class="row-stats">
+        <span><b>95→176 tok/s</b> paged throughput, N=1 to N=32, never crosses naive's ~530-550</span>
+        <span><b>~0.001</b> max abs diff, paged FA-2 kernel vs SDPA, scrambled block layout</span>
+        <span><b>~1100ms → ~69ms</b> paged TTFT after adding kernel warmup</span>
+      </div>
+      <div class="row-links">
+        <a href="paged-inference/index.html">Read the full writeup →</a>
+        <a href="https://github.com/VrajPatel105/paged-inference-engine" target="_blank" rel="noopener">Repository →</a>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="row-head">
         <span class="row-title">cpp-gpu-inference — an end-to-end GPU inference stack</span>
       </div>
       <p class="row-desc">CUDA and Triton kernels, FlashAttention-2 forward and backward written from scratch and wrapped in a custom <code>torch.autograd.Function</code>, and an LLM.int8()-style INT8 post-training quantizer — each one benchmarked against the production library it replaces (cuBLAS, PyTorch SDPA, bitsandbytes) rather than against itself. Profiled with Nsight Compute to confirm the intended mechanism actually fired at hardware level, not just that the wall clock moved.</p>
@@ -252,6 +269,15 @@
   <div class="head"><span><b>04</b> &nbsp;Writing</span></div>
 
   <div class="rows">
+
+    <a class="row" href="paged-inference/index.html">
+      <div class="row-head">
+        <span class="row-title">Building a paged inference engine from scratch, and measuring it honestly</span>
+        <span class="row-when">August 2026</span>
+      </div>
+      <p class="row-desc">A paged KV cache, continuous batching scheduler, a FlashAttention-2 kernel rewritten for block-based paging, and INT8 KV cache quantization, benchmarked against a naive sequential baseline. Includes the concurrency sweep where naive wins, and why.</p>
+      <div class="row-links"><span>Read →</span></div>
+    </a>
 
     <a class="row" href="gpu-inference/index.html">
       <div class="row-head">
