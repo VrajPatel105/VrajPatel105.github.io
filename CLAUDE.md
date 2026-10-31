@@ -29,6 +29,8 @@ media/
   my_photo.jpg              profile photo, About section, 4:5 frame (.jpg/.jpeg/.png/.webp)
   <anything>.pdf            résumé; if several, the newest by last commit date wins
   experience/<slug>.jpg     one photo per role, Experience → Photos tab, 4:3
+  experience/thumbs/<slug>.jpg  400px preview (metadata stripped) for the Timeline thumbnail and Photos tab;
+                            optional (the full photo is used if missing), the lightbox always opens the full photo
   gallery/*.jpg             any number, any shape, "Off the keyboard" section
                             (content.json also records each image's w/h so the gallery lays out before photos load)
 notes/
@@ -66,9 +68,10 @@ When Vraj says this after uploading, do the following. The script is `scripts/pr
    ```
    This fixes orientation, **strips all metadata including GPS**, converts to JPG, and resizes the long edge to at most **2000px (gallery), 1600px (experience), 1400px (profile)**. Gallery photos keep their shape. Look at the output again to confirm each crop.
 5. **New résumé:** if a new PDF arrived in `media/`, rename it to `media/Vraj_Patel_Resume.pdf` (`git mv`, replacing the old one) and copy it over `/resume.pdf` so old links serve the latest version. Clear company-specific PDF metadata (e.g. a Title naming a company) with pypdf if present.
-6. **Regenerate the index:** `python3 scripts/build_content_index.py`.
-7. **Verify:** `python3 -m http.server` and check in a headless browser (Playwright is preinstalled) at 360, 768 and 1280px: the profile photo, the Photos tab and the lightbox from both the gallery and the Photos tab, gallery captions, no console errors, no horizontal overflow.
-8. **Ship:** commit, push, open a PR and merge it into `main`. After Pages deploys (~1 minute), check https://vrajpatel105.github.io/.
+6. **Experience previews:** for each new or replaced `media/experience/<slug>.jpg`, write `media/experience/thumbs/<slug>.jpg`: long edge 400px, JPEG quality ~82, no metadata (same Pillow steps as the script).
+7. **Regenerate the index:** `python3 scripts/build_content_index.py`.
+8. **Verify:** `python3 -m http.server` and check in a headless browser (Playwright is preinstalled) at 360, 768 and 1280px: the profile photo, the Photos tab and the lightbox from both the gallery and the Photos tab, gallery captions, no console errors, no horizontal overflow.
+9. **Ship:** commit, push, open a PR and merge it into `main`. After Pages deploys (~1 minute), check https://vrajpatel105.github.io/.
 
 Remind Vraj: phone photos carry GPS, and the originals stay in git history even after processing. Turn location off before exporting.
 
