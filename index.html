@@ -282,6 +282,7 @@ p, li { text-wrap: pretty; }
 .x-qlabel { margin-bottom: var(--s-1); font: 400 var(--fs-12)/1.3 var(--font-mono); color: var(--ink-2); }
 .x-qlist { list-style: none; display: grid; align-content: start; gap: var(--s-1); }
 .x-qlist--reserve { min-height: calc(4 * var(--tap) + 3 * var(--s-1)); } /* holds 4 rows so the panel never jumps */
+.x-qlist--reserve3 { min-height: calc(3 * var(--tap) + 2 * var(--s-1)); } /* the waiting queue holds at most 3 */
 .x-req {
   position: relative; display: flex; align-items: center; gap: var(--s-1); width: 100%; min-height: var(--tap); padding: var(--s-half) var(--s-1);
   border: 1px solid var(--line); border-radius: var(--r-s); background: var(--panel);
@@ -358,7 +359,7 @@ p, li { text-wrap: pretty; }
   .x-sched { grid-template-columns: minmax(0, 1fr); }
   .x-sched .x-rail { border-left: 0; }
   .x-qlist { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .x-qlist--reserve { min-height: calc(2 * var(--tap) + var(--s-1)); }   /* 4 items = 2 rows of 2 */
+  .x-qlist--reserve, .x-qlist--reserve3 { min-height: calc(2 * var(--tap) + var(--s-1)); }   /* up to 4 items = 2 rows of 2 */
   .x-rail .x-gwrap { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: var(--s-2); }
   .x-rail .x-gauge:nth-child(-n+2) { padding-top: 0; border-top: 0; }
   .x-plate { margin-top: 0; }
@@ -413,7 +414,7 @@ p, li { text-wrap: pretty; }
   .x-pbody h2 { font-size: 24px; }
 }
 
-/* ---------- 8. About: photo, prose, facts, now, how I measure ---------- */
+/* ---------- 8. About: photo, prose, facts, now ---------- */
 .x-about { display: grid; grid-template-columns: 288px minmax(0, 1fr); gap: var(--s-6); align-items: start; }
 .x-photo { position: relative; width: 100%; max-width: 100%; aspect-ratio: 4 / 5; overflow: hidden; display: grid; place-items: center; border: 1px solid var(--line); border-radius: var(--r-m); background: var(--wash); }
 .x-photo img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
@@ -434,11 +435,6 @@ p, li { text-wrap: pretty; }
   .x-now ul { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--s-3); }
   .x-now li { grid-template-columns: minmax(0, 1fr); gap: var(--s-1); padding-bottom: 0; }
 }
-.x-measure { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); background: var(--panel); border: 1px solid var(--line); border-radius: var(--r-m); overflow: hidden; }
-.x-measure div { padding: var(--card-pad); }
-.x-measure div + div { border-left: 1px solid var(--line); }
-.x-measure b { display: block; margin-bottom: var(--s-1); font: 500 var(--fs-12)/1.3 var(--font-mono); color: var(--ink-2); }
-.x-measure p { font: 500 var(--fs-18)/1.45 var(--font-display); letter-spacing: -0.01em; }
 
 /* ---------- 9. Work cards (rows align across a pair via subgrid) ---------- */
 .x-work { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s-3); }
@@ -501,6 +497,8 @@ p, li { text-wrap: pretty; }
 .timeline__what p { margin-top: var(--s-half); font-size: var(--fs-14); line-height: 1.6; color: var(--ink-2); }
 
 .timeline__side { justify-content: flex-end; }
+.x-tthumb { flex: none; width: 72px; aspect-ratio: 4 / 3; padding: 0; overflow: hidden; border: 1px solid var(--line); border-radius: var(--r-xs); background: var(--wash); cursor: zoom-in; }
+.x-tthumb img { width: 100%; height: 100%; object-fit: cover; }
 
 /* Experience view: Timeline / Photos tabs reuse the scheduler's segmented control */
 .x-tabs { margin-bottom: var(--s-4); }
@@ -603,8 +601,6 @@ p, li { text-wrap: pretty; }
   .x-about { grid-template-columns: 224px minmax(0, 1fr); gap: var(--s-4); }
 }
 @media (max-width: 860px) {
-  .x-measure { grid-template-columns: minmax(0, 1fr); }
-  .x-measure div + div { border-left: 0; border-top: 1px solid var(--line); }
 }
 @media (max-width: 767px) {
   .x-work, .grid-2 { grid-template-columns: minmax(0, 1fr); }
@@ -614,7 +610,6 @@ p, li { text-wrap: pretty; }
   .x-about { grid-template-columns: minmax(0, 1fr); }
   .x-photo { max-width: 240px; }
   .x-now li { grid-template-columns: minmax(0, 1fr); gap: var(--s-half); }
-  .x-measure p { font-size: var(--fs-16); }
   .foot > .wrap { flex-direction: column; align-items: flex-start; }
 }
 
@@ -631,7 +626,7 @@ p, li { text-wrap: pretty; }
   #panel-timeline { display: block !important; }
   .x-sched { display: block; border: 0; margin-top: 16px; }
   .hero > .wrap, .section > .wrap { padding-block: 16px; }
-  .card, .x-work article, .x-proof div, .timeline li, .x-measure, .table-wrap { break-inside: avoid; box-shadow: none; }
+  .card, .x-work article, .x-proof div, .timeline li, .table-wrap { break-inside: avoid; box-shadow: none; }
   .x-after { opacity: 1; transform: none; }
   main a[href^="http"]:not(.btn)::after { content: " (" attr(href) ")"; font: 400 8pt/1.3 var(--font-mono); color: #5f5d58; overflow-wrap: anywhere; }
 }
@@ -709,7 +704,7 @@ p, li { text-wrap: pretty; }
         </div>
         <div class="x-qgroup">
           <p class="x-qlabel">waiting</p>
-          <ul class="x-qlist x-qlist--reserve" id="q-wait"></ul>
+          <ul class="x-qlist x-qlist--reserve3" id="q-wait"></ul>
         </div>
       </div>
 
@@ -734,7 +729,7 @@ p, li { text-wrap: pretty; }
         <div class="x-mainfoot">
           <div>
             <p class="x-cap">Each request is one of my projects. Click a bar or a request to read it.</p>
-            <p class="x-fine">Toy numbers: the gauges illustrate the scheduler, not a benchmark. Real measurements are in each project.</p>
+            <p class="x-fine">Toy numbers: the gauges illustrate the scheduler, not a benchmark. Real measurements are in each project, on an RTX 5080 Laptop GPU (Blackwell, sm_120 · 16 GB · CUDA 12.9).</p>
           </div>
         </div>
       </div>
@@ -762,11 +757,6 @@ p, li { text-wrap: pretty; }
             <p class="x-gfig"><span id="m-pad">0%</span><small>of slot-iters</small></p>
             <p class="x-note">Continuous batching pads none: a free slot is refilled the next iteration.</p>
           </div>
-        </div>
-        <div class="x-plate">
-          <p>measured on</p>
-          <p><b>RTX 5080 Laptop GPU</b> · Blackwell, sm_120 · 16 GB · CUDA 12.9</p>
-          <p><b>Galaxy S26</b> · Snapdragon 8 Elite Gen 5 · Hexagon NPU</p>
         </div>
       </div>
     </section>
@@ -805,12 +795,6 @@ p, li { text-wrap: pretty; }
           </ul>
         </div>
       </div>
-    </div>
-    <p class="eyebrow sublabel">How I measure</p>
-    <div class="x-measure">
-      <div><b>01</b><p>Benchmark against the production baseline, not a strawman.</p></div>
-      <div><b>02</b><p>Report where mine loses (e.g. SDPA is still faster at long sequences).</p></div>
-      <div><b>03</b><p>Profile before optimizing — Nsight Compute on every kernel.</p></div>
     </div>
   </div>
 </section>
@@ -929,32 +913,32 @@ p, li { text-wrap: pretty; }
     </div>
     <div class="x-tabpanel" id="panel-timeline" role="tabpanel" aria-labelledby="tab-timeline" tabindex="0">
       <ol class="timeline">
-        <li class="is-current">
+        <li class="is-current" data-slug="gdms-capstone">
           <p class="timeline__when">Sep 2026–present</p>
           <div class="timeline__what"><strong>Senior Capstone, General Dynamics Mission Systems (GDMS)</strong><p>Hybrid state estimation models (transformers and state space models) benchmarked against an Extended Kalman Filter (EKF).</p></div>
           <div class="timeline__side" aria-hidden="true"></div>
         </li>
-        <li>
+        <li data-slug="fleet-robotics">
           <p class="timeline__when">Summer 2026</p>
           <div class="timeline__what"><strong>ML Engineer Intern, Fleet Robotics</strong><p>Fixed sim-to-real heading drift in a MuJoCo RL policy and retrained the SAC policy; built AWS/Snowflake telemetry pipelines and Streamlit dashboards.</p></div>
           <div class="btns timeline__side"><a class="btn" href="https://lnkd.in/p/gMaM6HDj" target="_blank" rel="noopener">LinkedIn post <span aria-hidden="true">↗</span><span class="vh"> about ML Engineer Intern, Fleet Robotics (opens in a new tab)</span></a></div>
         </li>
-        <li>
+        <li data-slug="bluetech-externship-2026">
           <p class="timeline__when">Mar 2026</p>
           <div class="timeline__what"><strong>Blue Tech externship, 2026</strong><p>CMVS simulated autonomous UUV sonar mine detection (MATLAB/Simulink); led a cohort workshop on AI-assisted development with Claude.</p></div>
           <div class="btns timeline__side"><a class="btn" href="https://lnkd.in/p/g2JJ2A32" target="_blank" rel="noopener">LinkedIn post <span aria-hidden="true">↗</span><span class="vh"> about Blue Tech externship, 2026 (opens in a new tab)</span></a></div>
         </li>
-        <li>
+        <li data-slug="smast-research">
           <p class="timeline__when">Sep–Nov 2025</p>
           <div class="timeline__what"><strong>Research Software Engineering Intern, SMAST</strong><p>Parallelized NOAA offshore-wind spatial simulations 2x.</p></div>
           <div class="btns timeline__side"><a class="btn" href="https://www.linkedin.com/posts/vrajpatel105_wrapping-up-an-incredible-micro-internship-activity-7394126929957773313-otMJ" target="_blank" rel="noopener">LinkedIn post <span aria-hidden="true">↗</span><span class="vh"> about Research Software Engineering Intern, SMAST (opens in a new tab)</span></a></div>
         </li>
-        <li>
+        <li data-slug="smast-data-science">
           <p class="timeline__when">Jun–Aug 2025</p>
           <div class="timeline__what"><strong>Data Science Intern, SMAST</strong><p>38 years of estuary data; report turnaround cut from 3 weeks to 10 minutes.</p></div>
           <div class="btns timeline__side"><a class="btn" href="https://www.linkedin.com/posts/vrajpatel105_wrapping-up-an-incredible-summer-internship-activity-7359916390083936256-LVyu" target="_blank" rel="noopener">LinkedIn post <span aria-hidden="true">↗</span><span class="vh"> about Data Science Intern, SMAST (opens in a new tab)</span></a></div>
         </li>
-        <li>
+        <li data-slug="bluetech-externship-2025">
           <p class="timeline__when">2025</p>
           <div class="timeline__what"><strong>Blue Tech externship, 2025</strong></div>
           <div class="btns timeline__side"><span class="chip chip--solid">1st place, 2025 cohort</span><a class="btn" href="https://lnkd.in/p/gUFm4vCX" target="_blank" rel="noopener">LinkedIn post <span aria-hidden="true">↗</span><span class="vh"> about Blue Tech externship, 2025 (opens in a new tab)</span></a></div>
@@ -1206,6 +1190,18 @@ const GALLERY = [
   const ON_PAGES = /\.github\.io$/i.test(location.hostname);
   const INDEXED = /^(media|notes)\/|^resume\.pdf$/i;
   const fileURL = (path) => "/" + path.split("/").map(encodeURIComponent).join("/");
+  /* Photos get a version from the file's git hash (or size), so a new or replaced photo
+     never hits a stale browser cache, including a 404 cached while Pages was still deploying. */
+  const mediaURL = (f) => fileURL(f.path) + "?v=" + encodeURIComponent((f.sha || "").slice(0, 10) || f.size || "0");
+  /* One retry after a few seconds (Pages may still be deploying a just-pushed photo), then fail(). */
+  function onImgError(img, fail) {
+    img.addEventListener("error", function handler() {
+      if (img.dataset.retried) { img.removeEventListener("error", handler); fail(); return; }
+      img.dataset.retried = "1";
+      const src = img.src;
+      setTimeout(() => { img.src = src + (src.includes("?") ? "&" : "?") + "r=" + Date.now(); }, 4000);
+    });
+  }
   function getJSON(url, gh) {
     return fetch(url, gh ? { headers: { Accept: "application/vnd.github+json" } } : { cache: "no-cache" })
       .then((res) => (res.ok ? res.json() : Promise.reject(res.status)));
@@ -1220,7 +1216,7 @@ const GALLERY = [
     const live = ON_PAGES
       ? getJSON(REPO_API + "/git/trees/main?recursive=1", true).then((d) => {
           if (!d || !Array.isArray(d.tree)) throw new Error("no tree");
-          return d.tree.filter((n) => n.type === "blob" && INDEXED.test(n.path)).map((n) => ({ path: n.path, size: n.size }));
+          return d.tree.filter((n) => n.type === "blob" && INDEXED.test(n.path)).map((n) => ({ path: n.path, size: n.size, sha: n.sha }));
         })
       : Promise.reject(new Error("not on Pages"));
     return live
@@ -1406,7 +1402,7 @@ const GALLERY = [
     const it = S.it;
     let tokens = 0;
     if (it >= S.nextArr) {
-      if (S.queue.length < 4) { const r = BY[ORDER[S.ptr % ORDER.length]]; S.ptr++; S.queue.push({ r: r, arr: it, len: jlen(r) }); }
+      if (S.queue.length < 3) { const r = BY[ORDER[S.ptr % ORDER.length]]; S.ptr++; S.queue.push({ r: r, arr: it, len: jlen(r) }); }
       S.nextArr = it + 3 + Math.floor(rnd() * 6);
     }
     S.slots.forEach((g) => { if (g) { g.gen++; tokens++; } });
@@ -1449,7 +1445,7 @@ const GALLERY = [
   let G = {};
   function layoutGantt() {
     const compact = phoneMQ.matches;
-    G = compact ? { LW: 48, CW: 12, LH: 32, GAP: 8, GL: 8 } : { LW: 64, CW: 18, LH: 44, GAP: 8, GL: 10 };
+    G = compact ? { LW: 48, CW: 12, LH: 32, GAP: 8, GL: 8 } : { LW: 64, CW: 18, LH: 56, GAP: 8, GL: 14 };
     G.compact = compact;
     G.W = clamp(Math.floor((gwrap.clientWidth - G.LW - 8) / G.CW), compact ? 12 : 20, 60);
     G.top = 24; G.lanesH = SLOTS * (G.LH + G.GAP);
@@ -1804,13 +1800,13 @@ const GALLERY = [
     function show(src) {
       if (!src) return;
       img.addEventListener("load", () => { img.hidden = false; mono.hidden = true; }, { once: true });
-      img.addEventListener("error", () => { img.hidden = true; mono.hidden = false; img.removeAttribute("src"); }, { once: true });
+      onImgError(img, () => { img.hidden = true; mono.hidden = false; img.removeAttribute("src"); });
       img.src = src;
     }
     if (PROFILE_PHOTO) show(PROFILE_PHOTO);
     else indexReady.then((files) => {
       const f = files.find((x) => /^media\/my_photo\.(jpe?g|png|webp)$/i.test(x.path));
-      if (f) show(fileURL(f.path));
+      if (f) show(mediaURL(f));
     });
   })();
 
@@ -1933,7 +1929,7 @@ const GALLERY = [
       btn.classList.add("is-loaded");
       scheduleRender();
     });
-    img.addEventListener("error", () => {
+    onImgError(img, () => {
       tiles = tiles.filter((x) => x !== t);
       photos = photos.filter((x) => x !== p);
       if (!photos.length) { showPlaceholders(); return; }
@@ -1969,7 +1965,7 @@ const GALLERY = [
     const list = files
       .filter((f) => /^media\/gallery\/[^/]+$/i.test(f.path) && IMG_RE.test(f.path))
       .sort((a, b) => a.path.localeCompare(b.path, undefined, { numeric: true }))
-      .map((f) => ({ src: fileURL(f.path), caption: prettify(f.path.split("/").pop()), ratio: f.w && f.h ? f.w / f.h : 0 }));
+      .map((f) => ({ src: mediaURL(f), caption: prettify(f.path.split("/").pop()), ratio: f.w && f.h ? f.w / f.h : 0 }));
     showPhotos(list);
   });
 
@@ -2064,33 +2060,55 @@ const GALLERY = [
     });
 
     const cards = Array.from(document.querySelectorAll("#roles .x-role"));
-    const rolePhotos = [];   // in page order, only roles whose photo loaded
+    const rolePhotos = [];   // in page order, every role with a photo; a photo that fails to load is dropped
     function caption(card) {
       return card.querySelector(".x-role__org").textContent + " · " + card.querySelector("strong").textContent + " · " + card.querySelector(".x-role__when").textContent;
+    }
+    const findImg = (files, dir, slug) => {
+      const re = new RegExp("^media/experience/" + dir + slug + "\\.(jpe?g|png|webp)$", "i");
+      return files.find((x) => re.test(x.path));
+    };
+    /* A photo button: the small preview (media/experience/thumbs/<slug>.jpg, if present) on the
+       page, the full photo in the lightbox. Used by the Photos tab and the Timeline. */
+    function photoButton(cls, src, entry, onLoad, onFail) {
+      const btn = document.createElement("button");
+      btn.type = "button"; btn.className = cls;
+      btn.setAttribute("aria-label", "Open photo: " + entry.caption);
+      const img = document.createElement("img");
+      img.loading = "lazy"; img.decoding = "async"; img.alt = "";
+      if (onLoad) img.addEventListener("load", onLoad, { once: true });
+      onImgError(img, onFail);
+      img.src = src;
+      btn.appendChild(img);
+      btn.addEventListener("click", () => openLightbox(rolePhotos, rolePhotos.indexOf(entry), btn));
+      return btn;
     }
     indexReady.then((files) => {
       cards.forEach((card) => {
         const slug = card.getAttribute("data-slug");
-        const re = new RegExp("^media/experience/" + slug + "\\.(jpe?g|png|webp)$", "i");
-        const f = files.find((x) => re.test(x.path));
+        const f = findImg(files, "", slug);
         if (!f) return;
-        const entry = { src: fileURL(f.path), caption: caption(card), card: card };
-        const btn = document.createElement("button");
-        btn.type = "button"; btn.className = "x-role__img";
-        btn.setAttribute("aria-label", "Open photo: " + entry.caption);
-        const img = document.createElement("img");
-        img.loading = "lazy"; img.decoding = "async"; img.alt = "";
-        img.addEventListener("load", () => {
-          const ph = card.querySelector(".x-role__ph");
-          if (ph) ph.remove();
-          rolePhotos.push(entry);
-          rolePhotos.sort((a, b) => cards.indexOf(a.card) - cards.indexOf(b.card));
-        }, { once: true });
-        img.addEventListener("error", () => btn.remove(), { once: true });
-        img.src = entry.src;
-        btn.appendChild(img);
-        btn.addEventListener("click", () => openLightbox(rolePhotos, rolePhotos.indexOf(entry), btn));
+        const th = findImg(files, "thumbs/", slug);
+        const small = th ? mediaURL(th) : mediaURL(f);
+        const entry = { src: mediaURL(f), caption: caption(card), card: card };
+        rolePhotos.push(entry);
+        const row = document.querySelector('.timeline li[data-slug="' + slug + '"]');
+        let tbtn = null;
+        const fail = () => {
+          const k = rolePhotos.indexOf(entry);
+          if (k >= 0) rolePhotos.splice(k, 1);
+          btn.remove();
+          if (tbtn) tbtn.remove();
+        };
+        const btn = photoButton("x-role__img", small, entry, () => { const ph = card.querySelector(".x-role__ph"); if (ph) ph.remove(); }, fail);
         card.querySelector(".x-role__media").appendChild(btn);
+        const side = row && row.querySelector(".timeline__side");
+        if (side) {
+          tbtn = photoButton("x-tthumb", small, entry, null, fail);
+          side.removeAttribute("aria-hidden");
+          side.classList.add("btns");
+          side.insertBefore(tbtn, side.firstChild);
+        }
       });
     });
   })();
