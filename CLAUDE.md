@@ -77,3 +77,7 @@ Remind Vraj: phone photos carry GPS, and the originals stay in git history even 
 - Serve locally (`python3 -m http.server`) and check 360, 375, 768, 1024, 1280 and 1440px: no horizontal overflow, no console errors, no text under 12px, tap targets ≥ 44px, the sticky nav never covers section headings, "you are here" reads "08 / Notes" at the bottom.
 - Links: notes PDFs, résumé, posts ↔ home page, images in posts.
 - `git diff --stat main -- transformer-trace/` is empty.
+
+## If the Pages deploy fails
+
+GitHub Pages deploys `main` with its built-in "pages build and deployment" run. If the **build** job passes but **deploy** fails with "Deployment failed, try again later", the problem is on GitHub's side, not in the files. Re-run the failed jobs from the Actions tab. If the re-run sits in "queued" for a long time, merge the next change to `main` instead: every push starts a fresh deploy.
