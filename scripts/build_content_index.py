@@ -6,9 +6,10 @@ file anywhere else, or when the API is unavailable. It also takes each file's da
 from here, because the tree API has no dates.
 
 Each entry: {"path", "size" (bytes), "date" (ISO 8601 last commit date; the file's
-modification time if it is not committed yet)}.
+modification time if it is not committed yet)}, plus "w" and "h" (pixels) for images
+when Pillow is installed, so the gallery can lay out before the photos load.
 
-Run from anywhere, stdlib only:
+Run from anywhere (stdlib only; Pillow optional, for image sizes):
     python3 scripts/build_content_index.py
 Commit content.json whenever media/ or notes/ change.
 """
@@ -23,6 +24,12 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 FOLDERS = ("media", "notes")
 EXTRA = ("resume.pdf",)
 SKIP = {".gitkeep", ".DS_Store", "Thumbs.db", "desktop.ini"}
+IMAGE_EXTS = (".jpg", ".jpeg", ".png", ".webp", ".avif")
+
+try:
+    from PIL import Image, ImageOps
+except ImportError:
+    Image = None
 
 
 def commit_date(rel):
@@ -39,12 +46,27 @@ def commit_date(rel):
     return datetime.datetime.fromtimestamp(mtime, datetime.timezone.utc).isoformat(timespec="seconds")
 
 
+def image_size(rel):
+    """(width, height) as displayed, after the EXIF rotation; None without Pillow."""
+    if Image is None or not rel.lower().endswith(IMAGE_EXTS):
+        return None
+    try:
+        with Image.open(os.path.join(ROOT, rel)) as im:
+            return ImageOps.exif_transpose(im).size
+    except OSError:
+        return None
+
+
 def entry(rel):
-    return {
+    e = {
         "path": rel,
         "size": os.path.getsize(os.path.join(ROOT, rel)),
         "date": commit_date(rel),
     }
+    size = image_size(rel)
+    if size:
+        e["w"], e["h"] = size
+    return e
 
 
 def main():

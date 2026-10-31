@@ -30,8 +30,8 @@ media/
   <anything>.pdf            résumé; if several, the newest by last commit date wins
   experience/<slug>.jpg     one photo per role, Experience → Photos tab, 4:3
   gallery/*.jpg             any number, any shape, "Off the keyboard" section
+                            (content.json also records each image's w/h so the gallery lays out before photos load)
 notes/
-  ml/*.pdf                  Notes → Machine learning column
   dl/*.pdf                  Notes → Deep learning column
 ```
 
@@ -50,7 +50,7 @@ Résumé buttons (nav, hero, contact) link the newest PDF in `media/`, then `/re
 
 ## Notes need no code
 
-Drop PDFs into `notes/ml/` or `notes/dl/`. Title = file name without `.pdf` and without a leading order number (`01 Recurrent Neural Networks.pdf` → "Recurrent Neural Networks"); rows sort by file name, numbers compared numerically. A filter box appears past 10 notes. Then regenerate `content.json`.
+Drop PDFs into `notes/dl/` (the only Notes column; the Machine learning column was removed). Title = file name without `.pdf` and without a leading order number (`01 Recurrent Neural Networks.pdf` → "Recurrent Neural Networks"); rows sort by file name, numbers compared numerically. A filter box appears past 10 notes. Then regenerate `content.json`.
 
 ## "Adjust the pictures"
 

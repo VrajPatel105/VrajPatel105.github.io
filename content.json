@@ -4,67 +4,314 @@
     {
       "path": "media/README.md",
       "size": 1139,
-      "date": "2026-10-30T08:13:51+00:00"
+      "date": "2026-10-30T08:13:51Z"
     },
     {
       "path": "media/Vraj_Patel_Resume.pdf",
       "size": 730505,
-      "date": "2026-10-30T08:13:51+00:00"
+      "date": "2026-10-30T08:13:51Z"
     },
     {
       "path": "media/experience/README.md",
       "size": 736,
-      "date": "2026-10-30T08:13:51+00:00"
+      "date": "2026-10-30T08:13:51Z"
+    },
+    {
+      "path": "media/experience/bluetech-externship-2025.jpg",
+      "size": 418354,
+      "date": "2026-10-31T02:55:01-04:00",
+      "w": 1618,
+      "h": 1080
+    },
+    {
+      "path": "media/experience/bluetech-externship-2026.jpg",
+      "size": 1451359,
+      "date": "2026-10-31T02:55:01-04:00",
+      "w": 2400,
+      "h": 1600
+    },
+    {
+      "path": "media/experience/fleet-robotics.jpg",
+      "size": 734809,
+      "date": "2026-10-31T02:55:01-04:00",
+      "w": 1920,
+      "h": 1440
+    },
+    {
+      "path": "media/experience/smast-data-science.jpg",
+      "size": 724701,
+      "date": "2026-10-31T02:55:01-04:00",
+      "w": 2545,
+      "h": 1440
+    },
+    {
+      "path": "media/experience/smast-research.jpg",
+      "size": 452780,
+      "date": "2026-10-31T02:55:01-04:00",
+      "w": 1440,
+      "h": 1920
+    },
+    {
+      "path": "media/gallery/01-campus-sunset.jpg",
+      "size": 409724,
+      "date": "2026-10-31T07:55:23+00:00",
+      "w": 2000,
+      "h": 1126
+    },
+    {
+      "path": "media/gallery/02-dandelion-at-sunset.jpg",
+      "size": 408237,
+      "date": "2026-10-31T07:55:23+00:00",
+      "w": 2000,
+      "h": 1126
+    },
+    {
+      "path": "media/gallery/03-autumn-squirrel.jpg",
+      "size": 619383,
+      "date": "2026-10-31T07:55:23+00:00",
+      "w": 1126,
+      "h": 2000
+    },
+    {
+      "path": "media/gallery/04-autumn-trees.jpg",
+      "size": 996726,
+      "date": "2026-10-31T07:55:23+00:00",
+      "w": 2000,
+      "h": 1126
+    },
+    {
+      "path": "media/gallery/05-full-moon.jpg",
+      "size": 25432,
+      "date": "2026-10-31T07:55:23+00:00",
+      "w": 2000,
+      "h": 1126
+    },
+    {
+      "path": "media/gallery/06-fireworks.jpg",
+      "size": 63700,
+      "date": "2026-10-31T07:55:23+00:00",
+      "w": 1280,
+      "h": 720
+    },
+    {
+      "path": "media/gallery/07-penguins.jpg",
+      "size": 540389,
+      "date": "2026-10-31T07:55:23+00:00",
+      "w": 1126,
+      "h": 2000
+    },
+    {
+      "path": "media/gallery/08-cat-nap.jpg",
+      "size": 350140,
+      "date": "2026-10-31T07:55:23+00:00",
+      "w": 1200,
+      "h": 1600
+    },
+    {
+      "path": "media/gallery/09-marble-bust.jpg",
+      "size": 295899,
+      "date": "2026-10-31T07:55:23+00:00",
+      "w": 1126,
+      "h": 2000
+    },
+    {
+      "path": "media/gallery/10-city-walk.jpg",
+      "size": 441318,
+      "date": "2026-10-31T07:55:23+00:00",
+      "w": 1125,
+      "h": 2000
+    },
+    {
+      "path": "media/gallery/11-looking-up.jpg",
+      "size": 624601,
+      "date": "2026-10-31T07:55:24+00:00",
+      "w": 1500,
+      "h": 2000
+    },
+    {
+      "path": "media/gallery/12-tennis-serve.jpg",
+      "size": 341297,
+      "date": "2026-10-31T07:55:24+00:00",
+      "w": 2000,
+      "h": 921
+    },
+    {
+      "path": "media/gallery/13-courtside.jpg",
+      "size": 238531,
+      "date": "2026-10-31T07:55:24+00:00",
+      "w": 2000,
+      "h": 924
+    },
+    {
+      "path": "media/gallery/14-new-racket.jpg",
+      "size": 138131,
+      "date": "2026-10-31T07:55:24+00:00",
+      "w": 1125,
+      "h": 2000
+    },
+    {
+      "path": "media/gallery/15-running-session.jpg",
+      "size": 91939,
+      "date": "2026-10-31T07:55:24+00:00",
+      "w": 985,
+      "h": 2000
+    },
+    {
+      "path": "media/gallery/16-cooking-night.jpg",
+      "size": 273384,
+      "date": "2026-10-31T07:55:24+00:00",
+      "w": 1125,
+      "h": 2000
+    },
+    {
+      "path": "media/gallery/17-tomato-prep.jpg",
+      "size": 325356,
+      "date": "2026-10-31T07:55:24+00:00",
+      "w": 1126,
+      "h": 2000
+    },
+    {
+      "path": "media/gallery/18-pasta-night.jpg",
+      "size": 313224,
+      "date": "2026-10-31T07:55:24+00:00",
+      "w": 1125,
+      "h": 2000
+    },
+    {
+      "path": "media/gallery/19-pizza.jpg",
+      "size": 289720,
+      "date": "2026-10-31T07:55:24+00:00",
+      "w": 1126,
+      "h": 2000
+    },
+    {
+      "path": "media/gallery/20-dal-and-rice.jpg",
+      "size": 296664,
+      "date": "2026-10-31T07:55:25+00:00",
+      "w": 1126,
+      "h": 2000
+    },
+    {
+      "path": "media/gallery/21-falafel-bowl.jpg",
+      "size": 301921,
+      "date": "2026-10-31T07:55:25+00:00",
+      "w": 1126,
+      "h": 2000
+    },
+    {
+      "path": "media/gallery/22-late-night-walk.jpg",
+      "size": 338058,
+      "date": "2026-10-31T07:55:25+00:00",
+      "w": 1125,
+      "h": 2000
+    },
+    {
+      "path": "media/gallery/23-mirror-selfie.jpg",
+      "size": 263670,
+      "date": "2026-10-31T07:55:25+00:00",
+      "w": 1126,
+      "h": 2000
+    },
+    {
+      "path": "media/gallery/24-central-limit-theorem.jpg",
+      "size": 372766,
+      "date": "2026-10-31T07:55:25+00:00",
+      "w": 2000,
+      "h": 1126
+    },
+    {
+      "path": "media/gallery/25-whiteboard-lecture.jpg",
+      "size": 359365,
+      "date": "2026-10-31T07:55:25+00:00",
+      "w": 2000,
+      "h": 1126
+    },
+    {
+      "path": "media/gallery/26-speaking-on-a-panel.jpg",
+      "size": 600564,
+      "date": "2026-10-31T07:55:25+00:00",
+      "w": 1920,
+      "h": 1440
+    },
+    {
+      "path": "media/gallery/27-workshop.jpg",
+      "size": 279480,
+      "date": "2026-10-31T07:55:25+00:00",
+      "w": 2000,
+      "h": 1126
+    },
+    {
+      "path": "media/gallery/28-clash-of-clans-base.jpg",
+      "size": 527305,
+      "date": "2026-10-31T07:55:25+00:00",
+      "w": 1125,
+      "h": 2000
+    },
+    {
+      "path": "media/gallery/29-new-cologne.jpg",
+      "size": 173996,
+      "date": "2026-10-31T07:55:26+00:00",
+      "w": 1125,
+      "h": 2000
+    },
+    {
+      "path": "media/gallery/30-climbing-wall.jpg",
+      "size": 314396,
+      "date": "2026-10-31T07:55:26+00:00",
+      "w": 1126,
+      "h": 2000
     },
     {
       "path": "media/gallery/README.md",
       "size": 554,
-      "date": "2026-10-30T08:13:51+00:00"
+      "date": "2026-10-30T08:13:51Z"
+    },
+    {
+      "path": "media/my_photo.jpg",
+      "size": 170165,
+      "date": "2026-10-31T07:55:22+00:00",
+      "w": 1120,
+      "h": 1400
     },
     {
       "path": "notes/dl/01 Artificial Neural Networks.pdf",
       "size": 4785827,
-      "date": "2026-10-30T08:13:51+00:00"
+      "date": "2026-10-30T08:13:51Z"
     },
     {
       "path": "notes/dl/02 Optimizing Neural Networks.pdf",
       "size": 7400767,
-      "date": "2026-10-30T08:13:51+00:00"
+      "date": "2026-10-30T08:13:51Z"
     },
     {
       "path": "notes/dl/03 Deep Learning for Computer Vision.pdf",
       "size": 6101470,
-      "date": "2026-10-30T08:13:51+00:00"
+      "date": "2026-10-30T08:13:51Z"
     },
     {
       "path": "notes/dl/04 Recurrent Neural Networks.pdf",
       "size": 6299933,
-      "date": "2026-10-30T08:13:51+00:00"
+      "date": "2026-10-30T08:13:51Z"
     },
     {
       "path": "notes/dl/05 Encoder-Decoder Mechanism.pdf",
       "size": 2826805,
-      "date": "2026-10-30T08:13:51+00:00"
+      "date": "2026-10-30T08:13:51Z"
     },
     {
       "path": "notes/dl/06 Transformer Architecture.pdf",
       "size": 17191988,
-      "date": "2026-10-30T08:13:51+00:00"
+      "date": "2026-10-30T08:13:51Z"
     },
     {
       "path": "notes/dl/README.md",
       "size": 528,
-      "date": "2026-10-30T08:13:51+00:00"
-    },
-    {
-      "path": "notes/ml/README.md",
-      "size": 518,
-      "date": "2026-10-30T08:13:51+00:00"
+      "date": "2026-10-30T08:13:51Z"
     },
     {
       "path": "resume.pdf",
       "size": 730505,
-      "date": "2026-10-30T08:13:51+00:00"
+      "date": "2026-10-30T08:13:51Z"
     }
   ]
 }
