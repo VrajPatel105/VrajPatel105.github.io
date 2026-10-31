@@ -563,7 +563,6 @@ p, li { text-wrap: pretty; }
 .g-item:focus-visible { outline-offset: 3px; }
 .g-ph { display: grid; place-items: center; border: 1px solid var(--line); background: linear-gradient(180deg, var(--wash), #e8e5dd); }
 .g-ph svg { width: 24px; height: 24px; color: var(--ink-3); opacity: 0.7; }
-.gallery-note { display: flex; align-items: center; gap: var(--s-1); margin-top: var(--s-2); font: 400 var(--fs-12)/1.5 var(--font-mono); color: var(--ink-2); }
 
 .lb { position: fixed; inset: 0; z-index: 80; display: grid; grid-template-rows: auto minmax(0, 1fr); background: rgba(246, 245, 241, 0.97); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px); animation: lb-in var(--dur) var(--ease); }
 @keyframes lb-in { from { opacity: 0; } }
@@ -785,7 +784,7 @@ p, li { text-wrap: pretty; }
       <figure class="x-photo">
         <!-- Photo: set PROFILE_PHOTO at the top of the script (e.g. "photo.jpg"). The monogram shows until the file loads. -->
         <img data-profile-photo alt="Vraj Patel" decoding="async" hidden>
-        <div class="x-mono-ph" id="photo-mono" role="img" aria-label="Vraj Patel, photo coming soon"><b>VP</b><small>photo coming soon</small></div>
+        <div class="x-mono-ph" id="photo-mono" role="img" aria-label="Vraj Patel"><b>VP</b></div>
       </figure>
       <div>
         <div class="x-prose">
@@ -1072,7 +1071,6 @@ p, li { text-wrap: pretty; }
       <p class="head__sub">A few photos from life away from the GPU.</p>
     </header>
     <div class="gallery" id="gallery-grid" aria-label="Photo gallery"></div>
-    <p class="gallery-note" id="gallery-note">Photos coming soon.</p>
   </div>
 </section>
 
@@ -1098,7 +1096,7 @@ p, li { text-wrap: pretty; }
 </section>
 
 <!-- ============ 08 · Notes ============ -->
-<!-- Every PDF in notes/ml/ and notes/dl/ appears here automatically. "01 Recurrent Neural Networks.pdf" -> "Recurrent Neural Networks". -->
+<!-- Every PDF in notes/dl/ appears here automatically. "01 Recurrent Neural Networks.pdf" -> "Recurrent Neural Networks". -->
 <section class="section" id="notes" aria-labelledby="notes-title">
   <div class="wrap">
     <header class="head">
@@ -1111,15 +1109,9 @@ p, li { text-wrap: pretty; }
       <input class="x-input" id="notes-filter" type="search" autocomplete="off" spellcheck="false" placeholder="e.g. attention">
       <p class="x-toast is-in" id="notes-count" aria-live="polite"></p>
     </div>
-    <div class="grid-2 x-notes">
-      <div>
-        <p class="eyebrow sublabel x-notes__label">Machine learning</p>
-        <ul class="x-writing" id="notes-ml" data-folder="notes/ml"><li class="x-notes__empty">Notes coming soon</li></ul>
-      </div>
-      <div>
-        <p class="eyebrow sublabel x-notes__label">Deep learning</p>
-        <ul class="x-writing" id="notes-dl" data-folder="notes/dl"><li class="x-notes__empty">Notes coming soon</li></ul>
-      </div>
+    <div class="x-notes">
+      <p class="eyebrow sublabel x-notes__label">Deep learning</p>
+      <ul class="x-writing" id="notes-dl" data-folder="notes/dl"><li class="x-notes__empty">Loading notes…</li></ul>
     </div>
   </div>
 </section>
@@ -1219,7 +1211,7 @@ const GALLERY = [
       .then((res) => (res.ok ? res.json() : Promise.reject(res.status)));
   }
   function loadIndex() {
-    const KEY = "vp-index-v1";
+    const KEY = "vp-index-v2";
     try {
       const cached = JSON.parse(sessionStorage.getItem(KEY) || "null");
       if (cached && Date.now() - cached.t < 600000 && Array.isArray(cached.files)) return Promise.resolve(cached.files);
@@ -1234,8 +1226,8 @@ const GALLERY = [
     return live
       .then((files) => snapshot.then((snap) => {
         const dates = {};
-        snap.forEach((f) => { if (f && f.date) dates[f.path] = f.date; });
-        files.forEach((f) => { if (dates[f.path]) f.date = dates[f.path]; });
+        snap.forEach((f) => { if (f && f.path) dates[f.path] = f; });
+        files.forEach((f) => { const d = dates[f.path]; if (d) { if (d.date) f.date = d.date; if (d.w && d.h && d.size === f.size) { f.w = d.w; f.h = d.h; } } });
         return files;
       }), () => snapshot)
       .then((files) => {
@@ -1827,7 +1819,7 @@ const GALLERY = [
      Sources, in order: GALLERY array → /gallery folder via the GitHub API
      (only on *.github.io) → six placeholder tiles. Errors fail silently.
      ===================================================================== */
-  const grid = $("gallery-grid"), note = $("gallery-note");
+  const grid = $("gallery-grid");
   const GAP = 8, IMG_RE = /\.(jpe?g|png|webp|avif)$/i;
   const PH_RATIOS = [3 / 2, 4 / 5, 1, 16 / 9, 2 / 3, 4 / 3];
   const PH_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="10" r="1.6"/><path d="M21 16l-5-5-8 8"/></svg>';
@@ -1925,7 +1917,6 @@ const GALLERY = [
       d.className = "g-ph"; d.setAttribute("aria-hidden", "true"); d.innerHTML = PH_ICON;
       return { el: d, ratio: r };
     });
-    note.hidden = false;
     renderGallery();
   }
   function labelTiles() {
@@ -1936,7 +1927,7 @@ const GALLERY = [
     btn.type = "button"; btn.className = "g-item";
     const img = document.createElement("img");
     img.loading = "lazy"; img.decoding = "async"; img.alt = p.caption || "";
-    const t = { el: btn, ratio: 1.5, photo: p };   // provisional 3:2 until the real size is known
+    const t = { el: btn, ratio: p.ratio || 1.5, photo: p };   // size from content.json, else 3:2 until it loads
     img.addEventListener("load", () => {
       if (img.naturalWidth && img.naturalHeight) t.ratio = img.naturalWidth / img.naturalHeight;
       btn.classList.add("is-loaded");
@@ -1948,17 +1939,26 @@ const GALLERY = [
       if (!photos.length) { showPlaceholders(); return; }
       labelTiles(); scheduleRender();
     });
-    img.src = p.src;
+    img.dataset.src = p.src;
+    if (lazyIO) lazyIO.observe(img); else img.src = p.src;
     btn.appendChild(img);
     btn.addEventListener("click", () => openLightbox(photos, photos.indexOf(p), btn));
     return t;
   }
+  /* Load a photo only when it is within about a screen of the viewport
+     (native loading="lazy" starts far earlier and fetches most of the gallery). */
+  const lazyIO = "IntersectionObserver" in window ? new IntersectionObserver((entries) => {
+    entries.forEach((e) => {
+      if (!e.isIntersecting) return;
+      lazyIO.unobserve(e.target);
+      e.target.src = e.target.dataset.src;
+    });
+  }, { rootMargin: "600px 0px" }) : null;
   function showPhotos(list) {
     const valid = list.filter((p) => p && p.src);
     if (!valid.length) return;
     photos = valid;
     grid.classList.remove("is-empty");
-    note.hidden = true;
     tiles = photos.map(makeTile);
     labelTiles();
     renderGallery();
@@ -1969,7 +1969,7 @@ const GALLERY = [
     const list = files
       .filter((f) => /^media\/gallery\/[^/]+$/i.test(f.path) && IMG_RE.test(f.path))
       .sort((a, b) => a.path.localeCompare(b.path, undefined, { numeric: true }))
-      .map((f) => ({ src: fileURL(f.path), caption: prettify(f.path.split("/").pop()) }));
+      .map((f) => ({ src: fileURL(f.path), caption: prettify(f.path.split("/").pop()), ratio: f.w && f.h ? f.w / f.h : 0 }));
     showPhotos(list);
   });
 
@@ -2096,13 +2096,13 @@ const GALLERY = [
   })();
 
   /* =====================================================================
-     NOTES: every PDF in notes/ml/ and notes/dl/, sorted by file name with
+     NOTES: every PDF in notes/dl/, sorted by file name with
      numbers compared numerically. Filter box only past 10 notes.
      ===================================================================== */
   (function () {
     const lists = Array.from(document.querySelectorAll("[data-folder]"));
     const wrap = $("notes-filter-wrap"), input = $("notes-filter"), count = $("notes-count");
-    const empty = '<li class="x-notes__empty">Notes coming soon</li>';
+    const empty = '<li class="x-notes__empty"><a href="https://github.com/VrajPatel105/vrajpatel105.github.io/tree/main/notes" target="_blank" rel="noopener">Browse the notes on GitHub <span aria-hidden="true">↗</span></a></li>';
     function title(name) { return name.replace(/\.pdf$/i, "").replace(/^\d+[\s._-]*/, "").replace(/\s+/g, " ").trim() || name; }
     function size(b) {
       if (!(b > 0)) return "PDF";
