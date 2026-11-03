@@ -40,7 +40,7 @@
     {
       "path": "media/experience/gdms-capstone.jpg",
       "size": 351677,
-      "date": "2026-11-01T23:50:32+00:00",
+      "date": "2026-11-01T18:51:23-05:00",
       "w": 1600,
       "h": 1200
     },
@@ -82,7 +82,7 @@
     {
       "path": "media/experience/thumbs/gdms-capstone.jpg",
       "size": 34015,
-      "date": "2026-11-01T23:50:33+00:00",
+      "date": "2026-11-01T18:51:23-05:00",
       "w": 400,
       "h": 300
     },
@@ -110,210 +110,196 @@
     {
       "path": "media/gallery/02-tennis-serve.jpg",
       "size": 179436,
-      "date": "2026-11-01T23:50:32+00:00",
+      "date": "2026-11-01T18:51:23-05:00",
       "w": 923,
       "h": 2000
     },
     {
       "path": "media/gallery/03-dandelion-at-sunset.jpg",
       "size": 408237,
-      "date": "2026-10-31T07:55:23+00:00",
+      "date": "2026-11-01T18:51:23-05:00",
       "w": 2000,
       "h": 1126
     },
     {
       "path": "media/gallery/04-autumn-squirrel.jpg",
       "size": 619383,
-      "date": "2026-10-31T07:55:23+00:00",
+      "date": "2026-11-01T18:51:23-05:00",
       "w": 1126,
       "h": 2000
     },
     {
       "path": "media/gallery/05-autumn-trees.jpg",
       "size": 996726,
-      "date": "2026-10-31T07:55:23+00:00",
+      "date": "2026-11-01T18:51:23-05:00",
       "w": 2000,
       "h": 1126
     },
     {
       "path": "media/gallery/06-full-moon.jpg",
       "size": 25432,
-      "date": "2026-10-31T07:55:23+00:00",
+      "date": "2026-11-01T18:51:23-05:00",
       "w": 2000,
       "h": 1126
     },
     {
       "path": "media/gallery/07-fireworks.jpg",
       "size": 63700,
-      "date": "2026-10-31T07:55:23+00:00",
+      "date": "2026-11-01T18:51:23-05:00",
       "w": 1280,
       "h": 720
     },
     {
       "path": "media/gallery/08-penguins.jpg",
       "size": 540389,
-      "date": "2026-10-31T07:55:23+00:00",
+      "date": "2026-11-01T18:51:23-05:00",
       "w": 1126,
       "h": 2000
     },
     {
       "path": "media/gallery/09-cat-nap.jpg",
       "size": 350140,
-      "date": "2026-10-31T07:55:23+00:00",
+      "date": "2026-11-01T18:51:23-05:00",
       "w": 1200,
       "h": 1600
     },
     {
       "path": "media/gallery/10-marble-bust.jpg",
       "size": 295899,
-      "date": "2026-10-31T07:55:23+00:00",
+      "date": "2026-11-01T18:51:23-05:00",
       "w": 1126,
       "h": 2000
     },
     {
       "path": "media/gallery/11-city-walk.jpg",
       "size": 441318,
-      "date": "2026-10-31T07:55:23+00:00",
+      "date": "2026-11-01T18:51:23-05:00",
       "w": 1125,
       "h": 2000
     },
     {
       "path": "media/gallery/12-looking-up.jpg",
       "size": 624601,
-      "date": "2026-10-31T07:55:24+00:00",
+      "date": "2026-11-01T18:51:23-05:00",
       "w": 1500,
       "h": 2000
     },
     {
       "path": "media/gallery/13-tennis-serve.jpg",
       "size": 341297,
-      "date": "2026-10-31T07:55:24+00:00",
+      "date": "2026-11-01T18:51:23-05:00",
       "w": 2000,
       "h": 921
     },
     {
-      "path": "media/gallery/14-courtside.jpg",
-      "size": 238531,
-      "date": "2026-10-31T07:55:24+00:00",
-      "w": 2000,
-      "h": 924
-    },
-    {
       "path": "media/gallery/15-new-racket.jpg",
       "size": 138131,
-      "date": "2026-10-31T07:55:24+00:00",
+      "date": "2026-11-01T18:51:23-05:00",
       "w": 1125,
       "h": 2000
     },
     {
       "path": "media/gallery/16-running-session.jpg",
       "size": 91939,
-      "date": "2026-10-31T07:55:24+00:00",
+      "date": "2026-11-01T18:51:23-05:00",
       "w": 985,
       "h": 2000
     },
     {
       "path": "media/gallery/17-cooking-night.jpg",
       "size": 273384,
-      "date": "2026-10-31T07:55:24+00:00",
+      "date": "2026-11-01T18:51:23-05:00",
       "w": 1125,
       "h": 2000
     },
     {
       "path": "media/gallery/18-tomato-prep.jpg",
       "size": 325356,
-      "date": "2026-10-31T07:55:24+00:00",
+      "date": "2026-11-01T18:51:23-05:00",
       "w": 1126,
       "h": 2000
     },
     {
       "path": "media/gallery/19-pasta-night.jpg",
       "size": 313224,
-      "date": "2026-10-31T07:55:24+00:00",
+      "date": "2026-11-01T18:51:23-05:00",
       "w": 1125,
       "h": 2000
     },
     {
       "path": "media/gallery/20-pizza.jpg",
       "size": 289720,
-      "date": "2026-10-31T07:55:24+00:00",
+      "date": "2026-11-01T18:51:23-05:00",
       "w": 1126,
       "h": 2000
     },
     {
       "path": "media/gallery/21-dal-and-rice.jpg",
       "size": 296664,
-      "date": "2026-10-31T07:55:25+00:00",
+      "date": "2026-11-01T18:51:23-05:00",
       "w": 1126,
       "h": 2000
     },
     {
       "path": "media/gallery/22-falafel-bowl.jpg",
       "size": 301921,
-      "date": "2026-10-31T07:55:25+00:00",
+      "date": "2026-11-01T18:51:23-05:00",
       "w": 1126,
       "h": 2000
     },
     {
       "path": "media/gallery/23-late-night-walk.jpg",
       "size": 338058,
-      "date": "2026-10-31T07:55:25+00:00",
+      "date": "2026-11-01T18:51:23-05:00",
       "w": 1125,
-      "h": 2000
-    },
-    {
-      "path": "media/gallery/24-mirror-selfie.jpg",
-      "size": 263670,
-      "date": "2026-10-31T07:55:25+00:00",
-      "w": 1126,
       "h": 2000
     },
     {
       "path": "media/gallery/25-central-limit-theorem.jpg",
       "size": 372766,
-      "date": "2026-10-31T07:55:25+00:00",
+      "date": "2026-11-01T18:51:23-05:00",
       "w": 2000,
       "h": 1126
     },
     {
       "path": "media/gallery/26-whiteboard-lecture.jpg",
       "size": 359365,
-      "date": "2026-10-31T07:55:25+00:00",
+      "date": "2026-11-01T18:51:23-05:00",
       "w": 2000,
       "h": 1126
     },
     {
       "path": "media/gallery/27-speaking-on-a-panel.jpg",
       "size": 600564,
-      "date": "2026-10-31T07:55:25+00:00",
+      "date": "2026-11-01T18:51:23-05:00",
       "w": 1920,
       "h": 1440
     },
     {
       "path": "media/gallery/28-workshop.jpg",
       "size": 279480,
-      "date": "2026-10-31T07:55:25+00:00",
+      "date": "2026-11-01T18:51:23-05:00",
       "w": 2000,
       "h": 1126
     },
     {
       "path": "media/gallery/29-clash-of-clans-base.jpg",
       "size": 527305,
-      "date": "2026-10-31T07:55:25+00:00",
+      "date": "2026-11-01T18:51:23-05:00",
       "w": 1125,
       "h": 2000
     },
     {
       "path": "media/gallery/30-new-cologne.jpg",
       "size": 173996,
-      "date": "2026-10-31T07:55:26+00:00",
+      "date": "2026-11-01T18:51:23-05:00",
       "w": 1125,
       "h": 2000
     },
     {
       "path": "media/gallery/31-climbing-wall.jpg",
       "size": 314396,
-      "date": "2026-10-31T07:55:26+00:00",
+      "date": "2026-11-01T18:51:23-05:00",
       "w": 1126,
       "h": 2000
     },
