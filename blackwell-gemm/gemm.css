@@ -1,0 +1,95 @@
+/* =====================================================================
+   BLACKWELL GEMM · pages
+   Additions on top of ../assets/post.css, built only from its tokens and
+   components (tiles from .x-proof, chips from the home page, .data tables,
+   details panels). Light theme only.
+   ===================================================================== */
+
+/* the kernel list on the overview */
+.g-kernels { padding: 0 !important; list-style: none; border-top: 1px solid var(--line); max-width: none !important; }
+.g-kernels li { margin: 0 !important; padding: var(--s-2) 0; border-bottom: 1px solid var(--line); }
+.g-kernels li > a, .g-kernels li > span { display: inline-flex; align-items: center; min-height: var(--tap); font: 600 var(--fs-18)/1.3 var(--font-display); letter-spacing: -0.01em; }
+.g-kernels li > small { font: 400 var(--fs-12)/1 var(--font-mono); color: var(--ink-2); }
+.g-kernels p { margin-top: 0 !important; font-size: var(--fs-14); line-height: 1.6; color: var(--ink-2); }
+
+/* "What the profile shows": the visible TODO */
+.g-todo .eyebrow { color: var(--mine); }
+
+/* GPU switch (tabs) */
+.g-switch {
+  display: inline-flex; flex-wrap: wrap; gap: var(--s-half); padding: var(--s-half);
+  border: 1px solid var(--line-strong); border-radius: var(--r-pill); background: var(--panel);
+}
+.g-switch button {
+  min-height: var(--tap); padding: 0 var(--s-2); border: 0; border-radius: var(--r-pill);
+  background: transparent; color: var(--ink); cursor: pointer;
+  font: 500 var(--fs-14)/1 var(--font-body);
+  transition: background-color var(--dur) var(--ease), color var(--dur) var(--ease);
+}
+.g-switch button:hover { background: var(--hover); }
+.g-switch button[aria-selected="true"] { background: var(--ink); color: var(--on-ink); }
+
+.g-dash > * + * { margin-top: var(--s-3); }
+.g-panel > * + * { margin-top: var(--s-2); }
+.g-panel + .g-panel { padding-top: var(--s-3); border-top: 1px solid var(--line); }
+.js .g-panel + .g-panel { padding-top: 0; border-top: 0; }
+.g-panel__h { margin: 0 !important; }
+.js .g-panel__h { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.post .g-meta { max-width: none; font: 400 var(--fs-12)/1.6 var(--font-mono); color: var(--ink-2); overflow-wrap: anywhere; }
+.post .g-fine { font: 400 var(--fs-12)/1.6 var(--font-mono); color: var(--ink-2); }
+.g-panel h4 { margin-top: var(--s-3); font: 600 var(--fs-16)/1.35 var(--font-display); letter-spacing: -0.01em; }
+.g-panel h4 small, .g-warn small { font: 400 var(--fs-12)/1.5 var(--font-mono); color: var(--ink-2); letter-spacing: 0; }
+.g-panel h4 small { margin-left: var(--s-1); }
+
+/* stat tiles: .x-proof at a smaller size, five across when there is room */
+.g-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(128px, 1fr)); gap: var(--s-1); }
+.g-tiles div { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r-s); padding: var(--s-2); }
+.g-tiles b { display: block; font: 600 var(--fs-18)/1.2 var(--font-display); letter-spacing: -0.01em; font-variant-numeric: tabular-nums; }
+.g-tiles small { display: block; margin-top: var(--s-half); font: 400 var(--fs-12)/1.45 var(--font-body); color: var(--ink-2); }
+@media (min-width: 1100px) { .g-tiles { margin-inline: -120px; } }
+
+/* warnings */
+.g-warn tbody th { font-weight: 500; }
+.g-warn tbody th small { display: block; margin-top: 2px; }
+.g-warn td small { color: var(--ink-2); }
+
+/* warp state + occupancy */
+.g-two { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s-2); }
+.g-box { padding: var(--s-2) var(--s-3) var(--s-3); background: var(--panel); border: 1px solid var(--line); border-radius: var(--r-m); }
+.g-box h4 { margin: 0 0 var(--s-1); }
+.g-box .g-fine { margin-top: var(--s-1); }
+@media (max-width: 640px) { .g-two { grid-template-columns: minmax(0, 1fr); } .g-box { padding-inline: var(--s-2); } }
+.g-dl div { padding-block: var(--s-1); border-top: 1px solid var(--line); }
+.g-dl dt { font: 400 var(--fs-12)/1.5 var(--font-mono); color: var(--ink-2); }
+.g-dl dd { margin: 0; font-size: var(--fs-14); line-height: 1.55; font-variant-numeric: tabular-nums; }
+.g-dl dd small { display: block; margin-top: 2px; font: 400 var(--fs-12)/1.5 var(--font-mono); color: var(--ink-2); }
+.g-dl .is-binding dd { font-weight: 600; }
+.g-chip {
+  display: inline-flex; align-items: center; min-height: 24px; margin-left: var(--s-half); padding: 0 var(--s-1);
+  border: 1px solid var(--ink); border-radius: var(--r-pill); background: var(--ink); color: var(--on-ink);
+  font: 500 var(--fs-12)/1 var(--font-mono); white-space: nowrap; vertical-align: middle;
+}
+
+/* the full report */
+.g-sections { display: grid; gap: var(--s-1); }
+.g-sections .details-body > * + * { margin-top: var(--s-2); }
+.g-metrics th[scope="row"] { font-weight: 400; }
+.post .g-note { max-width: none; font-size: var(--fs-14); line-height: 1.6; overflow-wrap: anywhere; }
+.g-note .eyebrow { display: block; margin-bottom: 2px; }
+
+/* previous / next */
+.g-pager { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s-2); margin-top: var(--s-6); }
+.g-pager > * {
+  display: flex; flex-direction: column; justify-content: center; gap: 2px; min-height: 64px; padding: var(--s-1) var(--s-2);
+  background: var(--panel); border: 1px solid var(--line); border-radius: var(--r-m);
+  font: 600 var(--fs-16)/1.3 var(--font-display); text-decoration: none;
+}
+.g-pager small { font: 400 var(--fs-12)/1.4 var(--font-mono); color: var(--ink-2); }
+.g-pager a:hover { background: var(--hover); border-color: var(--line-strong); }
+.g-pager__next { grid-column: 2; text-align: right; }
+.g-pager .is-off { color: var(--ink-2); background: transparent; border-style: dashed; }
+
+@media print {
+  .g-switch { display: none !important; }
+  .g-panel[hidden] { display: block !important; }
+}
