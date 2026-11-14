@@ -793,7 +793,7 @@ p, li { text-wrap: pretty; }
           <ul>
             <li><b>Capstone</b><span>GDMS senior capstone: hybrid transformer + state space models vs an EKF.</span></li>
             <li><b>Open source</b><span>vLLM PR #61901 in review.</span></li>
-            <li><b>Coming up</b><span>Fused attention kernel.</span></li>
+            <li><b>Coming up</b><span>A CUDA C++ paged decode-attention kernel.</span></li>
           </ul>
         </div>
       </div>
@@ -859,7 +859,7 @@ p, li { text-wrap: pretty; }
       </article>
       <article style="--c:#7A8CA0">
         <h3><i></i>Blackwell SGEMM ladder</h3>
-        <p class="x-slugline">blackwell-gemm · Oct 2026 · CUDA · in progress</p>
+        <p class="x-slugline">blackwell-gemm · Oct 2026 · CUDA</p>
         <p class="x-sum">FP32 matrix multiplication written from scratch in CUDA: 7 kernels from naive to warp tiling, each one optimization step, checked and measured against cuBLAS on an RTX 5080 Laptop GPU and an NVIDIA B200, and profiled with Nsight Compute.</p>
         <ul class="x-metrics">
           <li><span>06 warp tiling, 4096, RTX 5080 Laptop</span><b>17.88 TFLOP/s · 75.90% of cuBLAS</b></li>
@@ -1306,7 +1306,7 @@ const GALLERY = [
         ] }
       ],
       links: [["Repo", GH + "paged-inference-engine"], ["Write-up: Building a paged inference engine from scratch", "https://vrajpatel105.github.io/paged-inference/"]] },
-    { id: 3, name: "Blackwell SGEMM ladder", short: "SGEMM ladder", slug: "blackwell-gemm", c: "#7A8CA0", len: 20, p: 120, when: "Oct 2026", status: "progress",
+    { id: 3, name: "Blackwell SGEMM ladder", short: "SGEMM ladder", slug: "blackwell-gemm", c: "#7A8CA0", len: 20, p: 120, when: "Oct 2026", status: "ok",
       head: "06 warp tiling: 75.90% of cuBLAS at 4096 (RTX 5080 Laptop)",
       text: [
         "FP32 matrix multiplication (SGEMM) written from scratch in CUDA: 7 kernels, each one optimization step, measured against cuBLAS on an RTX 5080 Laptop GPU and a rented NVIDIA B200.",
