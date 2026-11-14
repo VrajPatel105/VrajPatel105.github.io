@@ -8,3 +8,7 @@ design-refs/
 design-explore/
 resume/
 
+
+# Nsight bundles (~540 MB) and text exports dropped in for the blackwell-gemm pages.
+# The inputs the build uses are copied into scripts/gemm_src/.
+gemm-content/

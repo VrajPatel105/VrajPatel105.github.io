@@ -1,0 +1,157 @@
+{
+ "size": "4096",
+ "kernels": [
+  {
+   "num": "00",
+   "name": "Naive",
+   "changed": "One thread per output element, reading straight from global memory.",
+   "slug": "00-naive"
+  },
+  {
+   "num": "01",
+   "name": "Coalesced",
+   "changed": "Neighboring threads read neighboring memory, so loads get batched.",
+   "slug": "01-coalesced"
+  },
+  {
+   "num": "02",
+   "name": "Shared-memory tiling",
+   "changed": "Each block copies a tile of A and B into shared memory and reuses it.",
+   "slug": "02-shared-memory-tiling"
+  },
+  {
+   "num": "03",
+   "name": "1D thread tiling",
+   "changed": "Each thread computes 8 outputs instead of 1 and keeps its sums in registers.",
+   "slug": "03-1d-thread-tiling"
+  },
+  {
+   "num": "04",
+   "name": "2D thread tiling",
+   "changed": "Each thread computes an 8x8 patch, reusing every loaded value 8 times.",
+   "slug": "04-2d-thread-tiling"
+  },
+  {
+   "num": "05",
+   "name": "float4 loads",
+   "changed": "Loads four floats at a time and stores A transposed so shared-memory reads are vectorized too.",
+   "slug": "05-float4-loads"
+  },
+  {
+   "num": "06",
+   "name": "Warp tiling",
+   "changed": "Splits each block's tile between warps, then between the threads of each warp. This was the hardest one.",
+   "slug": "06-warp-tiling"
+  }
+ ],
+ "machines": {
+  "rtx5080_laptop": {
+   "name": "NVIDIA GeForce RTX 5080 Laptop GPU",
+   "driver": "617.42",
+   "memory": "16303 MiB",
+   "nvcc": "13.3"
+  },
+  "b200": {
+   "name": "NVIDIA B200",
+   "driver": "580.173.02",
+   "memory": "183359 MiB",
+   "nvcc": "13.0"
+  }
+ },
+ "gpus": {
+  "rtx5080_laptop": {
+   "kernels": [
+    {
+     "tflops": "0.3260",
+     "pct_cublas": "1.38",
+     "ms": "421.561279",
+     "pass": "1"
+    },
+    {
+     "tflops": "1.8988",
+     "pct_cublas": "8.06",
+     "ms": "72.382751",
+     "pass": "1"
+    },
+    {
+     "tflops": "3.1197",
+     "pct_cublas": "13.24",
+     "ms": "44.054497",
+     "pass": "1"
+    },
+    {
+     "tflops": "7.6553",
+     "pct_cublas": "32.49",
+     "ms": "17.953327",
+     "pass": "1"
+    },
+    {
+     "tflops": "9.3199",
+     "pct_cublas": "39.56",
+     "ms": "14.746752",
+     "pass": "1"
+    },
+    {
+     "tflops": "16.2941",
+     "pct_cublas": "69.16",
+     "ms": "8.434912",
+     "pass": "1"
+    },
+    {
+     "tflops": "17.8818",
+     "pct_cublas": "75.90",
+     "ms": "7.685952",
+     "pass": "1"
+    }
+   ],
+   "cublas_tflops": "23.5603"
+  },
+  "b200": {
+   "kernels": [
+    {
+     "tflops": "0.5566",
+     "pct_cublas": "0.88",
+     "ms": "246.939651",
+     "pass": "1"
+    },
+    {
+     "tflops": "7.0047",
+     "pct_cublas": "11.06",
+     "ms": "19.620960",
+     "pass": "1"
+    },
+    {
+     "tflops": "9.1716",
+     "pct_cublas": "14.48",
+     "ms": "14.985280",
+     "pass": "1"
+    },
+    {
+     "tflops": "17.1376",
+     "pct_cublas": "27.06",
+     "ms": "8.019744",
+     "pass": "1"
+    },
+    {
+     "tflops": "18.0163",
+     "pct_cublas": "28.45",
+     "ms": "7.628592",
+     "pass": "1"
+    },
+    {
+     "tflops": "32.7263",
+     "pct_cublas": "51.68",
+     "ms": "4.199648",
+     "pass": "1"
+    },
+    {
+     "tflops": "35.2006",
+     "pct_cublas": "55.58",
+     "ms": "3.904448",
+     "pass": "1"
+    }
+   ],
+   "cublas_tflops": "63.3289"
+  }
+ }
+}

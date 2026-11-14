@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Blackwell GEMM: FP32 matrix multiplication from scratch in CUDA — Vraj Patel</title>
+<meta name="description" content="FP32 matrix multiplication written from scratch in CUDA: seven kernels, each one optimization step, measured against cuBLAS on an RTX 5080 Laptop GPU and an NVIDIA B200.">
+<meta name="author" content="Vraj Patel">
+<meta name="color-scheme" content="light">
+<meta name="theme-color" content="#f6f5f1">
+<link rel="canonical" href="https://vrajpatel105.github.io/blackwell-gemm/">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="Vraj Patel">
+<meta property="og:title" content="Blackwell GEMM: FP32 matrix multiplication from scratch in CUDA">
+<meta property="og:description" content="Seven SGEMM kernels written from scratch in CUDA, each one optimization step, measured against cuBLAS on an RTX 5080 Laptop GPU and an NVIDIA B200.">
+<meta property="og:url" content="https://vrajpatel105.github.io/blackwell-gemm/">
+<meta name="twitter:card" content="summary">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%231b1b1b'/%3E%3Ctext x='32' y='41' font-family='Inter,Helvetica,Arial,sans-serif' font-size='26' font-weight='700' letter-spacing='-1' text-anchor='middle' fill='%23f6f5f1'%3EVP%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&amp;family=Inter+Tight:wght@500;600&amp;family=Inter:wght@400;500;600&amp;display=swap">
+<link rel="stylesheet" href="../assets/post.css">
+<link rel="stylesheet" href="gemm.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+
+<header class="x-top">
+  <div class="wrap x-toprow">
+    <a class="x-brand" href="/">Vraj Patel <span>BATCHER</span></a>
+    <a class="x-back" href="/#writing">← Writing</a>
+  </div>
+  <div class="wrap x-prog" aria-hidden="true"><i id="prog"></i></div>
+</header>
+
+<main id="main" tabindex="-1">
+<article class="post">
+
+  <header class="post-head">
+    <p class="eyebrow">Nov 2026 · CUDA</p>
+    <h1>Blackwell GEMM: FP32 matrix multiplication from scratch in CUDA</h1>
+    <p class="post-lede">FP32 matrix multiplication (SGEMM) written from scratch in CUDA: seven kernels, each one optimization step, measured against cuBLAS on an RTX 5080 Laptop GPU and a rented NVIDIA B200. Every kernel is checked against cuBLAS before it is timed, and each one was profiled with Nsight Compute at 4096 x 4096.</p>
+    <p class="post-meta">Vraj Patel · <a href="https://github.com/VrajPatel105/blackwell-gemm" target="_blank" rel="noopener">github.com/VrajPatel105/blackwell-gemm</a></p>
+  </header>
+
+  <section id="results" aria-labelledby="h-results">
+    <h2 id="h-results"><span class="n">01</span>Results at 4096</h2>
+    <p>Warp tiling (kernel 06) reaches 75.90% of cuBLAS at 4096 on the RTX 5080 Laptop, the GPU the kernels were written and tuned on. The same code, with no retuning, reaches 55.58% of cuBLAS on the B200.</p>
+    <!-- gemm:chart-rtx5080_laptop -->
+    <figure class="chart" data-chart='{"title":"TFLOP/s per kernel at 4096, RTX 5080 Laptop","x":"kernel","unit":"TFLOP/s","decimals":2,"categories":["00","01","02","03","04","05","06"],"ref":{"value":23.56,"label":"cuBLAS 23.56 TFLOP/s","short":"cuBLAS 23.56"},"series":[{"name":"My kernels","role":"mine","values":[0.33,1.9,3.12,7.66,9.32,16.29,17.88]}]}'>
+      <p class="chart__title">RTX 5080 Laptop</p>
+      <ul class="chart__legend"></ul>
+      <div class="chart__plot"></div>
+      <figcaption>FP32, 4096 x 4096 x 4096. The line is cuBLAS on the same GPU.</figcaption>
+    </figure>
+    <div class="table-wrap">
+      <table class="data">
+        <caption>RTX 5080 Laptop · 4096 x 4096 x 4096 · FP32</caption>
+        <thead><tr><th scope="col">Kernel</th><th scope="col" class="num">TFLOP/s</th><th scope="col" class="num">% of cuBLAS</th></tr></thead>
+        <tbody>
+          <tr><th scope="row">00 Naive</th><td class="num is-mine">0.33</td><td class="num">1.38%</td></tr>
+          <tr><th scope="row">01 Coalesced</th><td class="num is-mine">1.90</td><td class="num">8.06%</td></tr>
+          <tr><th scope="row">02 Shared-memory tiling</th><td class="num is-mine">3.12</td><td class="num">13.24%</td></tr>
+          <tr><th scope="row">03 1D thread tiling</th><td class="num is-mine">7.66</td><td class="num">32.49%</td></tr>
+          <tr><th scope="row">04 2D thread tiling</th><td class="num is-mine">9.32</td><td class="num">39.56%</td></tr>
+          <tr><th scope="row">05 float4 loads</th><td class="num is-mine">16.29</td><td class="num">69.16%</td></tr>
+          <tr><th scope="row">06 Warp tiling</th><td class="num is-mine">17.88</td><td class="num">75.90%</td></tr>
+          <tr><th scope="row">cuBLAS</th><td class="num is-base">23.56</td><td class="num">100%</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <!-- /gemm:chart-rtx5080_laptop -->
+    <!-- gemm:chart-b200 -->
+    <figure class="chart" data-chart='{"title":"TFLOP/s per kernel at 4096, NVIDIA B200","x":"kernel","unit":"TFLOP/s","decimals":2,"categories":["00","01","02","03","04","05","06"],"ref":{"value":63.33,"label":"cuBLAS 63.33 TFLOP/s","short":"cuBLAS 63.33"},"series":[{"name":"My kernels","role":"mine","values":[0.56,7.0,9.17,17.14,18.02,32.73,35.2]}]}'>
+      <p class="chart__title">NVIDIA B200</p>
+      <ul class="chart__legend"></ul>
+      <div class="chart__plot"></div>
+      <figcaption>FP32, 4096 x 4096 x 4096. The line is cuBLAS on the same GPU.</figcaption>
+    </figure>
+    <div class="table-wrap">
+      <table class="data">
+        <caption>NVIDIA B200 · 4096 x 4096 x 4096 · FP32</caption>
+        <thead><tr><th scope="col">Kernel</th><th scope="col" class="num">TFLOP/s</th><th scope="col" class="num">% of cuBLAS</th></tr></thead>
+        <tbody>
+          <tr><th scope="row">00 Naive</th><td class="num is-mine">0.56</td><td class="num">0.88%</td></tr>
+          <tr><th scope="row">01 Coalesced</th><td class="num is-mine">7.00</td><td class="num">11.06%</td></tr>
+          <tr><th scope="row">02 Shared-memory tiling</th><td class="num is-mine">9.17</td><td class="num">14.48%</td></tr>
+          <tr><th scope="row">03 1D thread tiling</th><td class="num is-mine">17.14</td><td class="num">27.06%</td></tr>
+          <tr><th scope="row">04 2D thread tiling</th><td class="num is-mine">18.02</td><td class="num">28.45%</td></tr>
+          <tr><th scope="row">05 float4 loads</th><td class="num is-mine">32.73</td><td class="num">51.68%</td></tr>
+          <tr><th scope="row">06 Warp tiling</th><td class="num is-mine">35.20</td><td class="num">55.58%</td></tr>
+          <tr><th scope="row">cuBLAS</th><td class="num is-base">63.33</td><td class="num">100%</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <!-- /gemm:chart-b200 -->
+  </section>
+
+  <section id="kernels" aria-labelledby="h-kernels">
+    <h2 id="h-kernels"><span class="n">02</span>The seven kernels</h2>
+    <!-- gemm:kernels -->
+    <ol class="g-kernels">
+      <li><a href="00-naive/">00 · Naive</a><p>One thread per output element, reading straight from global memory.</p></li>
+      <li><a href="01-coalesced/">01 · Coalesced</a><p>Neighboring threads read neighboring memory, so loads get batched.</p></li>
+      <li><a href="02-shared-memory-tiling/">02 · Shared-memory tiling</a><p>Each block copies a tile of A and B into shared memory and reuses it.</p></li>
+      <li><a href="03-1d-thread-tiling/">03 · 1D thread tiling</a><p>Each thread computes 8 outputs instead of 1 and keeps its sums in registers.</p></li>
+      <li><a href="04-2d-thread-tiling/">04 · 2D thread tiling</a><p>Each thread computes an 8x8 patch, reusing every loaded value 8 times.</p></li>
+      <li><a href="05-float4-loads/">05 · float4 loads</a><p>Loads four floats at a time and stores A transposed so shared-memory reads are vectorized too.</p></li>
+      <li><a href="06-warp-tiling/">06 · Warp tiling</a><p>Splits each block&#x27;s tile between warps, then between the threads of each warp. This was the hardest one.</p></li>
+    </ol>
+    <!-- /gemm:kernels -->
+  </section>
+
+  <section id="machines" aria-labelledby="h-machines">
+    <h2 id="h-machines"><span class="n">03</span>The two machines</h2>
+    <dl class="spec">
+      <div><dt>RTX 5080 Laptop</dt><dd>NVIDIA GeForce RTX 5080 Laptop GPU, 16303 MiB, driver 617.42, CUDA 13.3</dd></div>
+      <div><dt>B200</dt><dd>NVIDIA B200, 183359 MiB, driver 580.173.02, CUDA 13.0</dd></div>
+    </dl>
+  </section>
+
+  <footer class="post-foot">
+    <div class="btns">
+      <a class="btn" href="/#writing">← All writing</a>
+      <a class="btn" href="https://github.com/VrajPatel105/blackwell-gemm" target="_blank" rel="noopener">Repo<span class="vh">: blackwell-gemm</span></a>
+      <a class="btn" href="https://github.com/VrajPatel105/blackwell-gemm/releases/tag/v0.1-fp32" target="_blank" rel="noopener">Release v0.1-fp32<span class="vh">: Nsight report files</span></a>
+    </div>
+    <p>Vraj Patel · Plain HTML on GitHub Pages. Numbers from <code>results/rtx5080_laptop.csv</code> and <code>results/b200.csv</code> in the repo.</p>
+  </footer>
+
+</article>
+</main>
+<script src="../assets/post.js"></script>
+</body>
+</html>

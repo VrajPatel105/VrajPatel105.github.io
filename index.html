@@ -373,7 +373,7 @@ p, li { text-wrap: pretty; }
 .x-panel {
   position: fixed; z-index: 50;
   top: calc(env(safe-area-inset-top, 0px) + var(--s-2)); right: calc(env(safe-area-inset-right, 0px) + var(--s-2)); bottom: calc(env(safe-area-inset-bottom, 0px) + var(--s-2));
-  width: min(560px, calc(100vw - 2 * var(--s-2)));
+  width: min(880px, calc(100vw - 2 * var(--s-2)));
   display: flex; flex-direction: column; background: var(--panel); border: 1px solid var(--line); border-radius: var(--r-m); box-shadow: var(--shadow-pop);
   transform: translateX(calc(100% + 32px)); visibility: hidden;
   transition: transform 320ms var(--ease), visibility 0s linear 320ms;
@@ -858,15 +858,16 @@ p, li { text-wrap: pretty; }
       <article style="--c:#7A8CA0">
         <h3><i></i>Blackwell SGEMM ladder</h3>
         <p class="x-slugline">blackwell-gemm · Oct 2026 · CUDA · in progress</p>
-        <p class="x-sum">A CUDA SGEMM ladder from scratch on the RTX 5080, 10+ kernels from naive to tensor-core mma.sync and CuTe, each profiled with Nsight Compute against cuBLAS. Now on kernel 03: shared-memory / 1D thread tiling.</p>
+        <p class="x-sum">FP32 matrix multiplication written from scratch in CUDA: 7 kernels from naive to warp tiling, each one optimization step, checked and measured against cuBLAS on an RTX 5080 Laptop GPU and an NVIDIA B200, and profiled with Nsight Compute.</p>
         <ul class="x-metrics">
-          <li><span>Done</span><b>01 naive · 02 coalescing</b></li>
-          <li><span>Current</span><b>03 1D thread tiling</b></li>
-          <li><span>Per-kernel GFLOP/s</span><b><span class="measuring">measuring</span></b></li>
+          <li><span>06 warp tiling, 4096, RTX 5080 Laptop</span><b>17.88 TFLOP/s · 75.90% of cuBLAS</b></li>
+          <li><span>Same code, no retuning, NVIDIA B200</span><b>35.20 TFLOP/s · 55.58% of cuBLAS</b></li>
+          <li><span>00 naive → 06 warp tiling, RTX 5080 Laptop</span><b>0.33 → 17.88 TFLOP/s</b></li>
         </ul>
         <div class="btns">
           <button class="btn" type="button" data-open="3">Read more<span class="vh"> about the Blackwell SGEMM ladder</span></button>
           <a class="btn" href="https://github.com/VrajPatel105/blackwell-gemm" target="_blank" rel="noopener">Repo<span class="vh">: blackwell-gemm</span></a>
+          <a class="btn" href="https://vrajpatel105.github.io/blackwell-gemm/" target="_blank" rel="noopener">Write-up<span class="vh">: Blackwell GEMM</span></a>
         </div>
       </article>
       <article style="--c:#8F6F8E">
@@ -1031,6 +1032,7 @@ p, li { text-wrap: pretty; }
       <h2 class="head__title" id="writing-title">05 · Writing</h2>
     </header>
     <ul class="x-writing">
+      <li><a href="https://vrajpatel105.github.io/blackwell-gemm/" target="_blank" rel="noopener"><span>Blackwell GEMM: FP32 matrix multiplication from scratch in CUDA</span><small>Nov 2026</small></a></li>
       <li><a href="https://vrajpatel105.github.io/paged-inference/" target="_blank" rel="noopener"><span>Building a paged inference engine from scratch, and measuring it honestly</span><small>Aug 2026</small></a></li>
       <li><a href="https://vrajpatel105.github.io/gpu-inference/" target="_blank" rel="noopener"><span>Building a GPU inference stack from scratch, and measuring it honestly</span><small>Aug 2026</small></a></li>
       <li><a href="https://vrajpatel105.github.io/transformer-trace/" target="_blank" rel="noopener"><span>I Built a Transformer From Scratch. Here's the Shape Trace Nobody Shows You.</span><small>Apr 2026</small></a></li>
@@ -1303,24 +1305,22 @@ const GALLERY = [
       ],
       links: [["Repo", GH + "paged-inference-engine"], ["Write-up: Building a paged inference engine from scratch", "https://vrajpatel105.github.io/paged-inference/"]] },
     { id: 3, name: "Blackwell SGEMM ladder", short: "SGEMM ladder", slug: "blackwell-gemm", c: "#7A8CA0", len: 20, p: 120, when: "Oct 2026", status: "progress",
-      head: "Per-kernel GFLOP/s: measuring",
+      head: "06 warp tiling: 75.90% of cuBLAS at 4096 (RTX 5080 Laptop)",
       text: [
-        "A CUDA SGEMM ladder written from scratch on the RTX 5080 (Blackwell, sm_120): 10+ kernels, each a step from naive to tensor cores.",
-        "Every step is profiled with Nsight Compute against cuBLAS. Currently on step 03, shared-memory tiling with 1D thread tiling. Per-kernel GFLOP/s are not published yet."
+        "FP32 matrix multiplication (SGEMM) written from scratch in CUDA: 7 kernels, each one optimization step, measured against cuBLAS on an RTX 5080 Laptop GPU and a rented NVIDIA B200.",
+        "Every kernel is checked against cuBLAS before it is timed, and each one was profiled with Nsight Compute at 4096 x 4096. The same code, with no retuning, reaches 55.58% of cuBLAS on the B200."
       ],
-      tables: [{ title: "The ladder", cols: ["Kernel", "Step", "GFLOP/s"], rows: [
-        ["01", "Naive", "measuring"],
-        ["02", "Global-memory coalescing", "measuring"],
-        ["03", "Shared-memory tiling / 1D thread tiling (current)", "measuring"],
-        ["04", "2D thread tiling", "measuring"],
-        ["05", "Vectorized loads", "measuring"],
-        ["06", "Warptiling", "measuring"],
-        ["07", "Double buffering", "measuring"],
-        ["08", "Tensor-core mma.sync", "measuring"],
-        ["09", "CuTe", "measuring"]
+      tables: [{ title: "TFLOP/s at 4096, FP32", cols: ["Kernel", "RTX 5080 Laptop", "% of cuBLAS", "NVIDIA B200", "% of cuBLAS"], rows: [
+        ["00 Naive", "0.33", "1.38%", "0.56", "0.88%"],
+        ["01 Coalesced", "1.90", "8.06%", "7.00", "11.06%"],
+        ["02 Shared-memory tiling", "3.12", "13.24%", "9.17", "14.48%"],
+        ["03 1D thread tiling", "7.66", "32.49%", "17.14", "27.06%"],
+        ["04 2D thread tiling", "9.32", "39.56%", "18.02", "28.45%"],
+        ["05 float4 loads", "16.29", "69.16%", "32.73", "51.68%"],
+        ["06 Warp tiling", "17.88", "75.90%", "35.20", "55.58%"],
+        ["cuBLAS", "23.56", "100%", "63.33", "100%"]
       ] }],
-      note: "GFLOP/s not yet published: shown as “measuring” until each kernel is profiled.",
-      links: [["Repo", GH + "blackwell-gemm"]] },
+      links: [["Repo", GH + "blackwell-gemm"], ["Write-up: Blackwell GEMM", "https://vrajpatel105.github.io/blackwell-gemm/"], ["Release v0.1-fp32: Nsight report files", GH + "blackwell-gemm/releases/tag/v0.1-fp32"]] },
     { id: 4, name: "Edge quantization on Snapdragon", short: "Edge quant", slug: "edge-quantization-snapdragon", c: "#C6A24A", len: 22, p: 160, when: "", status: "ok",
       head: "W8A8: 1.4 ms, 1.8x faster, but 24.6% top-1 agree",
       text: [
@@ -1377,7 +1377,7 @@ const GALLERY = [
   $("log-body").innerHTML = REQ.filter((r) => !r.goto).map((r) =>
     '<tr style="--c:' + r.c + '"><th scope="row" class="x-id"><i></i>req#' + r.id + "</th>" +
     '<td data-label="Project"><button type="button" data-open="' + r.id + '"><span>' + esc(r.name) + "</span><small>" + esc(r.slug) + (r.when ? " · " + r.when : "") + "</small></button></td>" +
-    '<td data-label="Headline metric">' + (r.id === 3 ? '<span class="measuring">GFLOP/s: measuring</span>' : esc(r.head)) + "</td>" +
+    '<td data-label="Headline metric">' + esc(r.head) + "</td>" +
     '<td data-label="Status">' + STATUS[r.status] + "</td></tr>"
   ).join("");
 
