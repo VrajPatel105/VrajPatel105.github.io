@@ -192,6 +192,13 @@
       "h": 921
     },
     {
+      "path": "media/gallery/14-autumn-canopy.jpg",
+      "size": 1038079,
+      "date": "2026-11-14T00:09:25+00:00",
+      "w": 1126,
+      "h": 2000
+    },
+    {
       "path": "media/gallery/15-new-racket.jpg",
       "size": 138131,
       "date": "2026-11-01T18:51:23-05:00",
@@ -255,6 +262,13 @@
       "h": 2000
     },
     {
+      "path": "media/gallery/24-window-view.jpg",
+      "size": 485020,
+      "date": "2026-11-14T00:09:26+00:00",
+      "w": 2000,
+      "h": 1126
+    },
+    {
       "path": "media/gallery/25-central-limit-theorem.jpg",
       "size": 372766,
       "date": "2026-11-01T18:51:23-05:00",
@@ -302,6 +316,13 @@
       "date": "2026-11-01T18:51:23-05:00",
       "w": 1126,
       "h": 2000
+    },
+    {
+      "path": "media/gallery/32-evening-sky.jpg",
+      "size": 298269,
+      "date": "2026-11-14T00:09:26+00:00",
+      "w": 2000,
+      "h": 1126
     },
     {
       "path": "media/gallery/README.md",

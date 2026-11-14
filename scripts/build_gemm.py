@@ -292,7 +292,7 @@ def render_bench_tiles(k, bench):
         r = b["kernels"][int(k["num"])]
         if not r:
             continue
-        h += '      <div><b>%s TFLOP/s</b><small>%s, %s x %s FP32</small></div>\n' % (tf(r["tflops"]), esc(g["label"]), SIZE, SIZE)
+        h += '      <div><b>%s</b><small>TFLOP/s on %s, %s x %s FP32</small></div>\n' % (tf(r["tflops"]), esc(g["label"]), SIZE, SIZE)
         h += '      <div><b>%s%%</b><small>Of cuBLAS on %s (%s TFLOP/s)</small></div>\n' % (esc(r["pct_cublas"]), esc(g["label"]), tf(b["cublas_tflops"]))
     return h + "    </div>"
 

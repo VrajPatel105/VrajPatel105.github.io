@@ -52,7 +52,7 @@
   --s-12: 96px;
 
   --container: 1180px;
-  --measure: 720px;
+  --measure: 960px;
   --gutter: 48px;
   --nav-h: 64px;
   --pad-l: max(var(--gutter), env(safe-area-inset-left, 0px));
@@ -166,14 +166,14 @@ code { font: 400 max(12px, 0.9em)/1 var(--font-mono); padding: 1px 5px; border-r
 .x-proof div { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r-s); padding: var(--s-3); }
 .x-proof b { display: block; font: 600 clamp(22px, 2.3vw, 28px)/1.1 var(--font-display); letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
 .x-proof small { display: block; margin-top: var(--s-1); font: 400 var(--fs-12)/1.5 var(--font-body); color: var(--ink-2); }
-@media (min-width: 1100px) { .x-proof--4 { grid-template-columns: repeat(4, minmax(0, 1fr)); margin-inline: -120px; } }
+@media (min-width: 900px) { .x-proof--4 { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
 @media (max-width: 640px) { .x-proof div { padding: var(--s-2); } }
 
 .post section { scroll-margin-top: var(--nav-h); padding-top: var(--s-6); }
 .post h2 { display: flex; gap: var(--s-1); align-items: baseline; margin-bottom: var(--s-3); font: 600 var(--fs-h2)/1.15 var(--font-display); letter-spacing: -0.02em; }
 .post h2 .n { flex: none; font: 500 var(--fs-14)/1 var(--font-mono); letter-spacing: 0; color: var(--ink-2); }
 .post h3 { margin: var(--s-4) 0 var(--s-1); font: 600 var(--fs-18)/1.35 var(--font-display); letter-spacing: -0.01em; }
-.post p, .post ul, .post ol { max-width: 68ch; }
+.post p, .post ul, .post ol { max-width: none; }
 .post p + p, .post p + ul, .post ul + p, .post ol + p, .post p + ol { margin-top: var(--s-2); }
 .post ul, .post ol { padding-left: 1.25em; }
 .post li + li { margin-top: var(--s-1); }
