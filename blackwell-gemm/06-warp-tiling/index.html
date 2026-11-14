@@ -44,9 +44,9 @@
     <p class="eyebrow x-proof-label">At 4096 x 4096</p>
     <!-- gemm:bench -->
     <div class="x-proof x-proof--4">
-      <div><b>17.88 TFLOP/s</b><small>RTX 5080 Laptop, 4096 x 4096 FP32</small></div>
+      <div><b>17.88</b><small>TFLOP/s on RTX 5080 Laptop, 4096 x 4096 FP32</small></div>
       <div><b>75.90%</b><small>Of cuBLAS on RTX 5080 Laptop (23.56 TFLOP/s)</small></div>
-      <div><b>35.20 TFLOP/s</b><small>NVIDIA B200, 4096 x 4096 FP32</small></div>
+      <div><b>35.20</b><small>TFLOP/s on NVIDIA B200, 4096 x 4096 FP32</small></div>
       <div><b>55.58%</b><small>Of cuBLAS on NVIDIA B200 (63.33 TFLOP/s)</small></div>
     </div>
     <!-- /gemm:bench -->
@@ -134,7 +134,7 @@
         <details>
           <summary>GPU Speed Of Light Roofline Chart (Overview) <small>1 note</small></summary>
           <div class="details-body">
-            <p class="g-note"><span class="eyebrow">INF</span>The ratio of peak float (FP32) to double (FP64) performance on this device is 64:1. The workload achieved 55% of this device's FP32 peak performance and 0% of its FP64 peak performance. See the Profiling Guide (https://docs.nvidia.com/nsight-compute/ProfilingGuide/index.html#roofline) for more details on roofline analysis.</p>
+            <p class="g-note"><span class="eyebrow">INF</span>The ratio of peak float (FP32) to double (FP64) performance on this device is 64:1. The workload achieved 55% of this device&#x27;s FP32 peak performance and 0% of its FP64 peak performance. See the Profiling Guide (https://docs.nvidia.com/nsight-compute/ProfilingGuide/index.html#roofline) for more details on roofline analysis.</p>
           </div>
         </details>
         <details>
@@ -157,7 +157,7 @@
               <tr><th scope="row">Issued Ipc Active</th><td class="num">2.84 inst/cycle</td></tr>
               <tr><th scope="row">SM Busy</th><td class="num">69.16%</td></tr>
             </tbody></table></div>
-            <p class="g-note"><span class="eyebrow">OPT</span>Shared FMA Heavy is the highest-utilized pipeline (68.1%) based on elapsed cycles in the workload, taking into account the rates of its different instructions. It is a physical pipe and shared by the logical pipes FMA Heavy and ALU Lite. It's dominated by its FMA Heavy sub-pipeline. The pipeline is well-utilized, but might become a bottleneck if more work is added. Based on the number of executed instructions, the highest utilized pipeline (61.5%) is Shared FMA Heavy. It can execute instructions from FMA. Comparing the two, the overall pipeline utilization appears to be caused by frequent, low-latency instructions. See the Profiling Guide (https://docs.nvidia.com/nsight-compute/ProfilingGuide/index.html#metrics-decoder) or hover over the pipeline name to understand the workloads handled by each pipeline. The Instruction Statistics section shows the mix of executed instructions for this workload. Check the Warp State Statistics section for which reasons cause warps to stall.</p>
+            <p class="g-note"><span class="eyebrow">OPT</span>Shared FMA Heavy is the highest-utilized pipeline (68.1%) based on elapsed cycles in the workload, taking into account the rates of its different instructions. It is a physical pipe and shared by the logical pipes FMA Heavy and ALU Lite. It&#x27;s dominated by its FMA Heavy sub-pipeline. The pipeline is well-utilized, but might become a bottleneck if more work is added. Based on the number of executed instructions, the highest utilized pipeline (61.5%) is Shared FMA Heavy. It can execute instructions from FMA. Comparing the two, the overall pipeline utilization appears to be caused by frequent, low-latency instructions. See the Profiling Guide (https://docs.nvidia.com/nsight-compute/ProfilingGuide/index.html#metrics-decoder) or hover over the pipeline name to understand the workloads handled by each pipeline. The Instruction Statistics section shows the mix of executed instructions for this workload. Check the Warp State Statistics section for which reasons cause warps to stall.</p>
           </div>
         </details>
         <details>
@@ -270,7 +270,7 @@
               <tr><th scope="row">Achieved Occupancy</th><td class="num">32.49%</td></tr>
               <tr><th scope="row">Achieved Active Warps Per SM</th><td class="num">15.59 warp</td></tr>
             </tbody></table></div>
-            <p class="g-note"><span class="eyebrow">OPT · Est. Local Speedup: 66.67%</span>The 4.00 theoretical warps per scheduler this kernel can issue according to its occupancy are below the hardware maximum of 12. This kernel's theoretical occupancy (33.3%) is limited by the number of required registers.</p>
+            <p class="g-note"><span class="eyebrow">OPT · Est. Local Speedup: 66.67%</span>The 4.00 theoretical warps per scheduler this kernel can issue according to its occupancy are below the hardware maximum of 12. This kernel&#x27;s theoretical occupancy (33.3%) is limited by the number of required registers.</p>
           </div>
         </details>
         <details>
@@ -375,7 +375,7 @@
         <details>
           <summary>GPU Speed Of Light Roofline Chart <small>1 note</small></summary>
           <div class="details-body">
-            <p class="g-note"><span class="eyebrow">INF</span>The ratio of peak float (FP32) to double (FP64) performance on this device is 2:1. The workload achieved 48% of this device's FP32 peak performance and 0% of its FP64 peak performance. See the Profiling Guide (https://docs.nvidia.com/nsight-compute/ProfilingGuide/index.html#roofline) for more details on roofline analysis.</p>
+            <p class="g-note"><span class="eyebrow">INF</span>The ratio of peak float (FP32) to double (FP64) performance on this device is 2:1. The workload achieved 48% of this device&#x27;s FP32 peak performance and 0% of its FP64 peak performance. See the Profiling Guide (https://docs.nvidia.com/nsight-compute/ProfilingGuide/index.html#roofline) for more details on roofline analysis.</p>
           </div>
         </details>
         <details>
@@ -513,7 +513,7 @@
               <tr><th scope="row">Achieved Occupancy</th><td class="num">24.11%</td></tr>
               <tr><th scope="row">Achieved Active Warps Per SM</th><td class="num">15.43 warp</td></tr>
             </tbody></table></div>
-            <p class="g-note"><span class="eyebrow">OPT · Est. Local Speedup: 75%</span>The 4.00 theoretical warps per scheduler this kernel can issue according to its occupancy are below the hardware maximum of 16. This kernel's theoretical occupancy (25.0%) is limited by the number of required registers.</p>
+            <p class="g-note"><span class="eyebrow">OPT · Est. Local Speedup: 75%</span>The 4.00 theoretical warps per scheduler this kernel can issue according to its occupancy are below the hardware maximum of 16. This kernel&#x27;s theoretical occupancy (25.0%) is limited by the number of required registers.</p>
           </div>
         </details>
         <details>

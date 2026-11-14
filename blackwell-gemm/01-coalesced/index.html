@@ -44,9 +44,9 @@
     <p class="eyebrow x-proof-label">At 4096 x 4096</p>
     <!-- gemm:bench -->
     <div class="x-proof x-proof--4">
-      <div><b>1.90 TFLOP/s</b><small>RTX 5080 Laptop, 4096 x 4096 FP32</small></div>
+      <div><b>1.90</b><small>TFLOP/s on RTX 5080 Laptop, 4096 x 4096 FP32</small></div>
       <div><b>8.06%</b><small>Of cuBLAS on RTX 5080 Laptop (23.56 TFLOP/s)</small></div>
-      <div><b>7.00 TFLOP/s</b><small>NVIDIA B200, 4096 x 4096 FP32</small></div>
+      <div><b>7.00</b><small>TFLOP/s on NVIDIA B200, 4096 x 4096 FP32</small></div>
       <div><b>11.06%</b><small>Of cuBLAS on NVIDIA B200 (63.33 TFLOP/s)</small></div>
     </div>
     <!-- /gemm:bench -->
@@ -132,7 +132,7 @@
         <details>
           <summary>GPU Speed Of Light Roofline Chart (Overview) <small>1 note</small></summary>
           <div class="details-body">
-            <p class="g-note"><span class="eyebrow">INF</span>The ratio of peak float (FP32) to double (FP64) performance on this device is 64:1. The workload achieved 5% of this device's FP32 peak performance and 0% of its FP64 peak performance. See the Profiling Guide (https://docs.nvidia.com/nsight-compute/ProfilingGuide/index.html#roofline) for more details on roofline analysis.</p>
+            <p class="g-note"><span class="eyebrow">INF</span>The ratio of peak float (FP32) to double (FP64) performance on this device is 64:1. The workload achieved 5% of this device&#x27;s FP32 peak performance and 0% of its FP64 peak performance. See the Profiling Guide (https://docs.nvidia.com/nsight-compute/ProfilingGuide/index.html#roofline) for more details on roofline analysis.</p>
           </div>
         </details>
         <details>
@@ -155,7 +155,7 @@
               <tr><th scope="row">Issued Ipc Active</th><td class="num">1.03 inst/cycle</td></tr>
               <tr><th scope="row">SM Busy</th><td class="num">28.89%</td></tr>
             </tbody></table></div>
-            <p class="g-note"><span class="eyebrow">OPT · Est. Local Speedup: 84.07%</span>All compute pipelines are under-utilized. Either this workload is very small or it doesn't issue enough warps per scheduler. Check the Launch Statistics and Scheduler Statistics sections for further details.</p>
+            <p class="g-note"><span class="eyebrow">OPT · Est. Local Speedup: 84.07%</span>All compute pipelines are under-utilized. Either this workload is very small or it doesn&#x27;t issue enough warps per scheduler. Check the Launch Statistics and Scheduler Statistics sections for further details.</p>
           </div>
         </details>
         <details>
@@ -268,7 +268,7 @@
               <tr><th scope="row">Achieved Occupancy</th><td class="num">66.65%</td></tr>
               <tr><th scope="row">Achieved Active Warps Per SM</th><td class="num">31.99 warp</td></tr>
             </tbody></table></div>
-            <p class="g-note"><span class="eyebrow">OPT · Est. Speedup: 13.4%</span>The 8.00 theoretical warps per scheduler this kernel can issue according to its occupancy are below the hardware maximum of 12. This kernel's theoretical occupancy (66.7%) is limited by the number of required registers, and the number of warps within each block.</p>
+            <p class="g-note"><span class="eyebrow">OPT · Est. Speedup: 13.4%</span>The 8.00 theoretical warps per scheduler this kernel can issue according to its occupancy are below the hardware maximum of 12. This kernel&#x27;s theoretical occupancy (66.7%) is limited by the number of required registers, and the number of warps within each block.</p>
           </div>
         </details>
         <details>
@@ -365,7 +365,7 @@
         <details>
           <summary>GPU Speed Of Light Roofline Chart <small>1 note</small></summary>
           <div class="details-body">
-            <p class="g-note"><span class="eyebrow">INF</span>The ratio of peak float (FP32) to double (FP64) performance on this device is 2:1. The workload achieved 9% of this device's FP32 peak performance and 0% of its FP64 peak performance. See the Profiling Guide (https://docs.nvidia.com/nsight-compute/ProfilingGuide/index.html#roofline) for more details on roofline analysis.</p>
+            <p class="g-note"><span class="eyebrow">INF</span>The ratio of peak float (FP32) to double (FP64) performance on this device is 2:1. The workload achieved 9% of this device&#x27;s FP32 peak performance and 0% of its FP64 peak performance. See the Profiling Guide (https://docs.nvidia.com/nsight-compute/ProfilingGuide/index.html#roofline) for more details on roofline analysis.</p>
           </div>
         </details>
         <details>
