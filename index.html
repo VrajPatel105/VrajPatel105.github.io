@@ -778,8 +778,10 @@ p, li { text-wrap: pretty; }
       </figure>
       <div>
         <div class="x-prose">
-          <p>I'm Vraj, a computer science student at UMass Dartmouth graduating in May 2027. I got hooked on the question of why a model that works in a notebook is slow in production, and that pulled me down the stack: from PyTorch into Triton and CUDA, from FLOPs into memory bandwidth, from a single request into scheduling hundreds.</p>
-          <p>I like building the thing from scratch first, then benchmarking it honestly against the production baseline, including where mine loses. Right now I'm working on a senior capstone with General Dynamics Mission Systems and climbing a CUDA SGEMM ladder on my RTX 5080. Off the keyboard, I play tennis.</p>
+          <p>I'm Vraj. I study computer science at UMass Dartmouth and finish in May 2027.</p>
+          <p>I wanted to know why a model that runs fine in a notebook gets slow once real users hit it. Chasing that took me from PyTorch to Triton to CUDA, and from counting FLOPs to watching memory bandwidth.</p>
+          <p>My habit is to write the thing myself before reaching for the library, then race the two. Mine often loses, and I write that part up too. The latest one was matrix multiplication in CUDA: seven kernels, the best at 75.9% of cuBLAS on my laptop's RTX 5080.</p>
+          <p>Right now I'm also on a senior capstone with General Dynamics Mission Systems. Away from the keyboard, I play tennis.</p>
         </div>
         <ul class="x-facts" aria-label="Quick facts">
           <li>Based in Massachusetts</li>
@@ -789,7 +791,7 @@ p, li { text-wrap: pretty; }
         <div class="card x-now">
           <p class="eyebrow">Now · Oct 2026</p>
           <ul>
-            <li><b>CUDA</b><span>Finishing the blackwell-gemm CUDA ladder: kernel 03, 1D thread tiling.</span></li>
+            <li><b>CUDA</b><span>blackwell-gemm is done: 7 kernels, measured on an RTX 5080 Laptop and a B200, with a write-up on this site.</span></li>
             <li><b>Capstone</b><span>GDMS senior capstone: hybrid transformer + state space models vs an EKF.</span></li>
             <li><b>Open source</b><span>vLLM PR #61901 in review.</span></li>
           </ul>
