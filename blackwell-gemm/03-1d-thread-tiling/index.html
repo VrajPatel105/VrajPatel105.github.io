@@ -1,0 +1,542 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Kernel 03: 1D thread tiling · Blackwell GEMM — Vraj Patel</title>
+<meta name="description" content="Kernel 03 of the blackwell-gemm FP32 SGEMM ladder: each thread computes 8 outputs instead of 1 and keeps its sums in registers. Results against cuBLAS and the Nsight Compute profile on an RTX 5080 Laptop GPU and an NVIDIA B200.">
+<meta name="author" content="Vraj Patel">
+<meta name="color-scheme" content="light">
+<meta name="theme-color" content="#f6f5f1">
+<link rel="canonical" href="https://vrajpatel105.github.io/blackwell-gemm/03-1d-thread-tiling/">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="Vraj Patel">
+<meta property="og:title" content="Kernel 03: 1D thread tiling · Blackwell GEMM">
+<meta property="og:description" content="Each thread computes 8 outputs instead of 1 and keeps its sums in registers. Measured against cuBLAS and profiled with Nsight Compute on two GPUs.">
+<meta property="og:url" content="https://vrajpatel105.github.io/blackwell-gemm/03-1d-thread-tiling/">
+<meta name="twitter:card" content="summary">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%231b1b1b'/%3E%3Ctext x='32' y='41' font-family='Inter,Helvetica,Arial,sans-serif' font-size='26' font-weight='700' letter-spacing='-1' text-anchor='middle' fill='%23f6f5f1'%3EVP%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&amp;family=Inter+Tight:wght@500;600&amp;family=Inter:wght@400;500;600&amp;display=swap">
+<link rel="stylesheet" href="../../assets/post.css">
+<link rel="stylesheet" href="../gemm.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+
+<header class="x-top">
+  <div class="wrap x-toprow">
+    <a class="x-brand" href="/">Vraj Patel <span>BATCHER</span></a>
+    <a class="x-back" href="../">← Blackwell GEMM</a>
+  </div>
+  <div class="wrap x-prog" aria-hidden="true"><i id="prog"></i></div>
+</header>
+
+<main id="main" tabindex="-1">
+<article class="post">
+
+  <header class="post-head">
+    <p class="eyebrow">Blackwell GEMM · Kernel 03 of 06</p>
+    <h1>Kernel 03: 1D thread tiling</h1>
+    <p class="post-lede">Each thread computes 8 outputs instead of 1 and keeps its sums in registers.</p>
+    <p class="post-meta">Vraj Patel · <a href="https://github.com/VrajPatel105/blackwell-gemm" target="_blank" rel="noopener">github.com/VrajPatel105/blackwell-gemm</a></p>
+    <p class="eyebrow x-proof-label">At 4096 x 4096</p>
+    <!-- gemm:bench -->
+    <div class="x-proof x-proof--4">
+      <div><b>7.66 TFLOP/s</b><small>RTX 5080 Laptop, 4096 x 4096 FP32</small></div>
+      <div><b>32.49%</b><small>Of cuBLAS on RTX 5080 Laptop (23.56 TFLOP/s)</small></div>
+      <div><b>17.14 TFLOP/s</b><small>NVIDIA B200, 4096 x 4096 FP32</small></div>
+      <div><b>27.06%</b><small>Of cuBLAS on NVIDIA B200 (63.33 TFLOP/s)</small></div>
+    </div>
+    <!-- /gemm:bench -->
+  </header>
+
+  <section id="shows" aria-labelledby="h-shows">
+    <h2 id="h-shows"><span class="n">01</span>What the profile shows</h2>
+    <div class="flag g-todo">
+      <p class="eyebrow">TODO: rewrite in my own words</p>
+      <p>Nsight Compute reports L1/TEX cache throughput at 76.69% and compute (SM) throughput at 76.17% on the RTX 5080 Laptop, and 70.76% and 45.55% on the B200.</p>
+    </div>
+  </section>
+
+  <section id="profile" aria-labelledby="h-profile">
+    <h2 id="h-profile"><span class="n">02</span>Profile</h2>
+    <!-- gemm:dashboard -->
+    <div class="g-dash" data-gemm-dash>
+    <div class="g-switch" role="tablist" aria-label="GPU" hidden>
+      <button type="button" role="tab" id="t-rtx5080_laptop" aria-controls="p-rtx5080_laptop" aria-selected="true" data-gpu="rtx5080_laptop">RTX 5080 Laptop</button>
+      <button type="button" role="tab" id="t-b200" aria-controls="p-b200" aria-selected="false" data-gpu="b200">NVIDIA B200</button>
+    </div>
+    <div class="g-panel" id="p-rtx5080_laptop" data-gpu="rtx5080_laptop" role="tabpanel" aria-labelledby="t-rtx5080_laptop">
+      <h3 class="g-panel__h">RTX 5080 Laptop</h3>
+      <p class="g-meta">grid (64, 64, 1) · block (512, 1, 1) · CC 12.0 · duration 27.57 ms · source: rtx5080_laptop_03_1d_thread_4096.txt</p>
+      <div class="g-tiles">
+        <div><b>76.17%</b><small>Compute (SM) throughput</small></div>
+        <div><b>76.17%</b><small>Memory throughput</small></div>
+        <div><b>L1/TEX 76.69%</b><small>Busiest memory unit (of L1/TEX, L2, DRAM)</small></div>
+        <div><b>54</b><small>Registers per thread</small></div>
+        <div><b>66.22% / 66.67%</b><small>Occupancy, achieved / theoretical</small></div>
+      </div>
+      <h4>Profiler warnings <small>most significant first</small></h4>
+      <div class="table-wrap">
+        <table class="data g-warn">
+          <thead><tr><th scope="col">Warning</th><th scope="col" class="num">Key %</th><th scope="col" class="num">Est. speedup</th></tr></thead>
+          <tbody>
+            <tr><th scope="row">Every scheduler is capable of issuing one instruction per cycle, but for this workload each scheduler only issues an instruction every 2.4 cycles.<small>Scheduler Statistics</small></th><td class="num"></td><td class="num">23.83% <small>local</small></td></tr>
+            <tr><th scope="row">The 8.00 theoretical warps per scheduler this kernel can issue according to its occupancy are below the hardware maximum of 12.<small>Occupancy</small></th><td class="num">66.7%</td><td class="num">23.83%</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="g-two">
+        <div class="g-box">
+          <h4>Warp state</h4>
+          <dl class="g-dl">
+            <div><dt>Warp cycles per issued instruction</dt><dd>18.83</dd></div>
+          </dl>
+        </div>
+        <div class="g-box">
+          <h4>Occupancy: block limits</h4>
+          <dl class="g-dl">
+            <div class="is-binding"><dt>Registers</dt><dd>2 blocks <span class="g-chip">binding</span></dd></div>
+            <div><dt>Shared Mem</dt><dd>6 blocks</dd></div>
+            <div><dt>Warps</dt><dd>3 blocks</dd></div>
+          </dl>
+          <p class="g-fine">Blocks per SM each resource allows. The lowest one sets occupancy.</p>
+        </div>
+      </div>
+      <h4>Full report <small>12 sections, in report order</small></h4>
+      <div class="g-sections">
+        <details>
+          <summary>GPU Speed Of Light Throughput <small>10 metrics · 1 note</small></summary>
+          <div class="details-body">
+            <div class="table-wrap"><table class="data g-metrics"><thead><tr><th scope="col">Metric</th><th scope="col" class="num">Value</th></tr></thead><tbody>
+              <tr><th scope="row">DRAM Frequency</th><td class="num">13.99 Ghz</td></tr>
+              <tr><th scope="row">SM Frequency</th><td class="num">1.49 Ghz</td></tr>
+              <tr><th scope="row">Elapsed Cycles</th><td class="num">41209707 cycle</td></tr>
+              <tr><th scope="row">Memory Throughput</th><td class="num">76.17%</td></tr>
+              <tr><th scope="row">DRAM Throughput</th><td class="num">22.43%</td></tr>
+              <tr><th scope="row">Duration</th><td class="num">27.57 ms</td></tr>
+              <tr><th scope="row">L1/TEX Cache Throughput</th><td class="num">76.69%</td></tr>
+              <tr><th scope="row">L2 Cache Throughput</th><td class="num">18.95%</td></tr>
+              <tr><th scope="row">SM Active Cycles</th><td class="num">40866556.58 cycle</td></tr>
+              <tr><th scope="row">Compute (SM) Throughput</th><td class="num">76.17%</td></tr>
+            </tbody></table></div>
+            <p class="g-note"><span class="eyebrow">INF</span>Compute and Memory are well-balanced: To reduce runtime, both computation and memory traffic must be reduced. Check both the Compute Workload Analysis and Memory Workload Analysis sections.</p>
+          </div>
+        </details>
+        <details>
+          <summary>GPU Speed Of Light Roofline Chart (Overview) <small>1 note</small></summary>
+          <div class="details-body">
+            <p class="g-note"><span class="eyebrow">INF</span>The ratio of peak float (FP32) to double (FP64) performance on this device is 64:1. The workload achieved 22% of this device's FP32 peak performance and 0% of its FP64 peak performance. See the Profiling Guide (https://docs.nvidia.com/nsight-compute/ProfilingGuide/index.html#roofline) for more details on roofline analysis.</p>
+          </div>
+        </details>
+        <details>
+          <summary>PM Sampling <small>3 metrics</small></summary>
+          <div class="details-body">
+            <div class="table-wrap"><table class="data g-metrics"><thead><tr><th scope="col">Metric</th><th scope="col" class="num">Value</th></tr></thead><tbody>
+              <tr><th scope="row">Maximum Buffer Size</th><td class="num">95.75 Mbyte</td></tr>
+              <tr><th scope="row">Maximum Sampling Interval</th><td class="num">6 us</td></tr>
+              <tr><th scope="row"># Pass Groups</th><td class="num">2</td></tr>
+            </tbody></table></div>
+          </div>
+        </details>
+        <details>
+          <summary>Compute Workload Analysis <small>5 metrics · 1 note</small></summary>
+          <div class="details-body">
+            <div class="table-wrap"><table class="data g-metrics"><thead><tr><th scope="col">Metric</th><th scope="col" class="num">Value</th></tr></thead><tbody>
+              <tr><th scope="row">Executed Ipc Active</th><td class="num">1.69 inst/cycle</td></tr>
+              <tr><th scope="row">Executed Ipc Elapsed</th><td class="num">1.68 inst/cycle</td></tr>
+              <tr><th scope="row">Issue Slots Busy</th><td class="num">41.91%</td></tr>
+              <tr><th scope="row">Issued Ipc Active</th><td class="num">1.69 inst/cycle</td></tr>
+              <tr><th scope="row">SM Busy</th><td class="num">41.91%</td></tr>
+            </tbody></table></div>
+            <p class="g-note"><span class="eyebrow">INF</span>Shared FMA Heavy is the highest-utilized pipeline (28.1%) based on elapsed cycles in the workload, taking into account the rates of its different instructions. It is a physical pipe and shared by the logical pipes FMA Heavy and ALU Lite. It's dominated by its FMA Heavy sub-pipeline. It is well-utilized, but should not be a bottleneck. Based on the number of executed instructions, the highest utilized pipeline (76.2%) is LSU. It executes load/store memory operations. Comparing the two, the overall pipeline utilization appears to be caused by frequent, low-latency instructions. See the Profiling Guide (https://docs.nvidia.com/nsight-compute/ProfilingGuide/index.html#metrics-decoder) or hover over the pipeline name to understand the workloads handled by each pipeline. The Instruction Statistics section shows the mix of executed instructions for this workload. Check the Warp State Statistics section for which reasons cause warps to stall.</p>
+          </div>
+        </details>
+        <details>
+          <summary>Memory Workload Analysis <small>15 metrics</small></summary>
+          <div class="details-body">
+            <div class="table-wrap"><table class="data g-metrics"><thead><tr><th scope="col">Metric</th><th scope="col" class="num">Value</th></tr></thead><tbody>
+              <tr><th scope="row">Local Memory Spilling Requests</th><td class="num">0</td></tr>
+              <tr><th scope="row">Local Memory Spilling Request Overhead</th><td class="num">0%</td></tr>
+              <tr><th scope="row">L2 Sector Promotion Misses</th><td class="num">0%</td></tr>
+              <tr><th scope="row">Shared Memory Spilling Requests</th><td class="num">0</td></tr>
+              <tr><th scope="row">Shared Memory Spilling Request Overhead</th><td class="num">0%</td></tr>
+              <tr><th scope="row">Memory Throughput</th><td class="num">154.20 Gbyte/s</td></tr>
+              <tr><th scope="row">Mem Busy</th><td class="num">64.42%</td></tr>
+              <tr><th scope="row">Max Bandwidth</th><td class="num">76.17%</td></tr>
+              <tr><th scope="row">L1/TEX Hit Rate</th><td class="num">0.00%</td></tr>
+              <tr><th scope="row">L2 Persisting Size</th><td class="num">9.44 Mbyte</td></tr>
+              <tr><th scope="row">L2 Compression Success Rate</th><td class="num">0%</td></tr>
+              <tr><th scope="row">L2 Compression Ratio</th><td class="num">0</td></tr>
+              <tr><th scope="row">L2 Compression Input Sectors</th><td class="num">0 sector</td></tr>
+              <tr><th scope="row">L2 Hit Rate</th><td class="num">50.89%</td></tr>
+              <tr><th scope="row">Mem Pipes Busy</th><td class="num">76.17%</td></tr>
+            </tbody></table></div>
+          </div>
+        </details>
+        <details>
+          <summary>Scheduler Statistics <small>5 metrics · 1 note</small></summary>
+          <div class="details-body">
+            <div class="table-wrap"><table class="data g-metrics"><thead><tr><th scope="col">Metric</th><th scope="col" class="num">Value</th></tr></thead><tbody>
+              <tr><th scope="row">One or More Eligible</th><td class="num">42.20%</td></tr>
+              <tr><th scope="row">Issued Warp Per Scheduler</th><td class="num">0.42</td></tr>
+              <tr><th scope="row">No Eligible</th><td class="num">57.80%</td></tr>
+              <tr><th scope="row">Active Warps Per Scheduler</th><td class="num">7.95 warp</td></tr>
+              <tr><th scope="row">Eligible Warps Per Scheduler</th><td class="num">1.32 warp</td></tr>
+            </tbody></table></div>
+            <p class="g-note"><span class="eyebrow">OPT · Est. Local Speedup: 23.83%</span>Every scheduler is capable of issuing one instruction per cycle, but for this workload each scheduler only issues an instruction every 2.4 cycles. This might leave hardware resources underutilized and may lead to less optimal performance. Out of the maximum of 12 warps per scheduler, this workload allocates an average of 7.95 active warps per scheduler, but only an average of 1.32 warps were eligible per cycle. Eligible warps are the subset of active warps that are ready to issue their next instruction. Every cycle with no eligible warp results in no instruction being issued and the issue slot remains unused. To increase the number of eligible warps, avoid possible load imbalances due to highly different execution durations per warp. Reducing stalls indicated on the Warp State Statistics and Source Counters sections can help, too.</p>
+          </div>
+        </details>
+        <details>
+          <summary>Warp State Statistics <small>4 metrics</small></summary>
+          <div class="details-body">
+            <div class="table-wrap"><table class="data g-metrics"><thead><tr><th scope="col">Metric</th><th scope="col" class="num">Value</th></tr></thead><tbody>
+              <tr><th scope="row">Warp Cycles Per Issued Instruction</th><td class="num">18.83 cycle</td></tr>
+              <tr><th scope="row">Warp Cycles Per Executed Instruction</th><td class="num">18.83 cycle</td></tr>
+              <tr><th scope="row">Avg. Active Threads Per Warp</th><td class="num">32</td></tr>
+              <tr><th scope="row">Avg. Not Predicated Off Threads Per Warp</th><td class="num">32.00</td></tr>
+            </tbody></table></div>
+          </div>
+        </details>
+        <details>
+          <summary>Instruction Statistics <small>6 metrics</small></summary>
+          <div class="details-body">
+            <div class="table-wrap"><table class="data g-metrics"><thead><tr><th scope="col">Metric</th><th scope="col" class="num">Value</th></tr></thead><tbody>
+              <tr><th scope="row">Local Memory Spilling Requests</th><td class="num">0 byte</td></tr>
+              <tr><th scope="row">Shared Memory Spilling Requests</th><td class="num">0 byte</td></tr>
+              <tr><th scope="row">Avg. Executed Instructions Per Scheduler</th><td class="num">17244160 inst</td></tr>
+              <tr><th scope="row">Executed Instructions</th><td class="num">4138598400 inst</td></tr>
+              <tr><th scope="row">Avg. Issued Instructions Per Scheduler</th><td class="num">17244160 inst</td></tr>
+              <tr><th scope="row">Issued Instructions</th><td class="num">4138598400 inst</td></tr>
+            </tbody></table></div>
+          </div>
+        </details>
+        <details>
+          <summary>Launch Statistics <small>18 metrics</small></summary>
+          <div class="details-body">
+            <div class="table-wrap"><table class="data g-metrics"><thead><tr><th scope="col">Metric</th><th scope="col" class="num">Value</th></tr></thead><tbody>
+              <tr><th scope="row">Block Size</th><td class="num">512</td></tr>
+              <tr><th scope="row">Cluster Scheduling Policy</th><td class="num">PolicySpread</td></tr>
+              <tr><th scope="row">Cluster Size</th><td class="num">0</td></tr>
+              <tr><th scope="row">Function Cache Configuration</th><td class="num">CachePreferNone</td></tr>
+              <tr><th scope="row">Grid Size</th><td class="num">4096</td></tr>
+              <tr><th scope="row">Preferred Cluster Size</th><td class="num">0</td></tr>
+              <tr><th scope="row">Registers Per Thread</th><td class="num">54 register/thread</td></tr>
+              <tr><th scope="row">Shared Memory Configuration Size</th><td class="num">32.77 Kbyte</td></tr>
+              <tr><th scope="row">Driver Shared Memory Per Block</th><td class="num">1.02 Kbyte/block</td></tr>
+              <tr><th scope="row">Dynamic Shared Memory Per Block</th><td class="num">0 byte/block</td></tr>
+              <tr><th scope="row">Static Shared Memory Per Block</th><td class="num">4.10 Kbyte/block</td></tr>
+              <tr><th scope="row"># SMs</th><td class="num">60 SM</td></tr>
+              <tr><th scope="row">Stack Size</th><td class="num">1024</td></tr>
+              <tr><th scope="row">Threads</th><td class="num">2097152 thread</td></tr>
+              <tr><th scope="row"># TPCs</th><td class="num">30</td></tr>
+              <tr><th scope="row">Enabled TPC IDs</th><td class="num">all</td></tr>
+              <tr><th scope="row">Uses Green Context</th><td class="num">0</td></tr>
+              <tr><th scope="row">Waves Per SM</th><td class="num">34.13</td></tr>
+            </tbody></table></div>
+          </div>
+        </details>
+        <details>
+          <summary>Occupancy <small>13 metrics · 1 note</small></summary>
+          <div class="details-body">
+            <div class="table-wrap"><table class="data g-metrics"><thead><tr><th scope="col">Metric</th><th scope="col" class="num">Value</th></tr></thead><tbody>
+              <tr><th scope="row">Max Active Clusters</th><td class="num">0 cluster</td></tr>
+              <tr><th scope="row">Max Cluster Size</th><td class="num">8 block</td></tr>
+              <tr><th scope="row">Overall GPU Occupancy</th><td class="num">0%</td></tr>
+              <tr><th scope="row">Cluster Occupancy</th><td class="num">0%</td></tr>
+              <tr><th scope="row">Block Limit Barriers</th><td class="num">24 block</td></tr>
+              <tr><th scope="row">Block Limit SM</th><td class="num">24 block</td></tr>
+              <tr><th scope="row">Block Limit Registers</th><td class="num">2 block</td></tr>
+              <tr><th scope="row">Block Limit Shared Mem</th><td class="num">6 block</td></tr>
+              <tr><th scope="row">Block Limit Warps</th><td class="num">3 block</td></tr>
+              <tr><th scope="row">Theoretical Active Warps per SM</th><td class="num">32 warp</td></tr>
+              <tr><th scope="row">Theoretical Occupancy</th><td class="num">66.67%</td></tr>
+              <tr><th scope="row">Achieved Occupancy</th><td class="num">66.22%</td></tr>
+              <tr><th scope="row">Achieved Active Warps Per SM</th><td class="num">31.78 warp</td></tr>
+            </tbody></table></div>
+            <p class="g-note"><span class="eyebrow">OPT · Est. Speedup: 23.83%</span>The 8.00 theoretical warps per scheduler this kernel can issue according to its occupancy are below the hardware maximum of 12. This kernel's theoretical occupancy (66.7%) is limited by the number of required registers.</p>
+          </div>
+        </details>
+        <details>
+          <summary>GPU and Memory Workload Distribution <small>10 metrics</small></summary>
+          <div class="details-body">
+            <div class="table-wrap"><table class="data g-metrics"><thead><tr><th scope="col">Metric</th><th scope="col" class="num">Value</th></tr></thead><tbody>
+              <tr><th scope="row">Average DRAM Active Cycles</th><td class="num">66432304 cycle</td></tr>
+              <tr><th scope="row">Total DRAM Elapsed Cycles</th><td class="num">3085488128 cycle</td></tr>
+              <tr><th scope="row">Average L1 Active Cycles</th><td class="num">40866556.58 cycle</td></tr>
+              <tr><th scope="row">Total L1 Elapsed Cycles</th><td class="num">2468512800 cycle</td></tr>
+              <tr><th scope="row">Average L2 Active Cycles</th><td class="num">36486971.38 cycle</td></tr>
+              <tr><th scope="row">Total L2 Elapsed Cycles</th><td class="num">888474504 cycle</td></tr>
+              <tr><th scope="row">Average SM Active Cycles</th><td class="num">40866556.58 cycle</td></tr>
+              <tr><th scope="row">Total SM Elapsed Cycles</th><td class="num">2468512800 cycle</td></tr>
+              <tr><th scope="row">Average SMSP Active Cycles</th><td class="num">40865001.42 cycle</td></tr>
+              <tr><th scope="row">Total SMSP Elapsed Cycles</th><td class="num">9874051200 cycle</td></tr>
+            </tbody></table></div>
+          </div>
+        </details>
+        <details>
+          <summary>Source Counters <small>4 metrics</small></summary>
+          <div class="details-body">
+            <div class="table-wrap"><table class="data g-metrics"><thead><tr><th scope="col">Metric</th><th scope="col" class="num">Value</th></tr></thead><tbody>
+              <tr><th scope="row">Branch Instructions Ratio</th><td class="num">0.01%</td></tr>
+              <tr><th scope="row">Branch Instructions</th><td class="num">34734080 inst</td></tr>
+              <tr><th scope="row">Branch Efficiency</th><td class="num">100%</td></tr>
+              <tr><th scope="row">Avg. Divergent Branches</th><td class="num">0 branches</td></tr>
+            </tbody></table></div>
+          </div>
+        </details>
+      </div>
+    </div>
+    <div class="g-panel" id="p-b200" data-gpu="b200" role="tabpanel" aria-labelledby="t-b200">
+      <h3 class="g-panel__h">NVIDIA B200</h3>
+      <p class="g-meta">grid (64, 64, 1) · block (512, 1, 1) · CC 10.0 · duration 13.32 ms · source: b200_03_1d_thread_4096.txt</p>
+      <div class="g-tiles">
+        <div><b>45.55%</b><small>Compute (SM) throughput</small></div>
+        <div><b>70.11%</b><small>Memory throughput</small></div>
+        <div><b>L1/TEX 70.76%</b><small>Busiest memory unit (of L1/TEX, L2, DRAM)</small></div>
+        <div><b>50</b><small>Registers per thread</small></div>
+        <div><b>49.55% / 50%</b><small>Occupancy, achieved / theoretical</small></div>
+      </div>
+      <h4>Profiler warnings <small>most significant first</small></h4>
+      <div class="table-wrap">
+        <table class="data g-warn">
+          <thead><tr><th scope="col">Warning</th><th scope="col" class="num">Key %</th><th scope="col" class="num">Est. speedup</th></tr></thead>
+          <tbody>
+            <tr><th scope="row">Every scheduler is capable of issuing one instruction per cycle, but for this workload each scheduler only issues an instruction every 2.2 cycles.<small>Scheduler Statistics</small></th><td class="num"></td><td class="num">29.89% <small>local</small></td></tr>
+            <tr><th scope="row">The 8.00 theoretical warps per scheduler this kernel can issue according to its occupancy are below the hardware maximum of 16.<small>Occupancy</small></th><td class="num">50.0%</td><td class="num">29.89%</td></tr>
+            <tr><th scope="row">Out of the 67556096.0 bytes sent to the L2 Compression unit only 0.00% were successfully compressed.<small>Memory Workload Analysis Chart</small></th><td class="num">0.00%</td><td class="num">0.8057%</td></tr>
+            <tr><th scope="row">Memory is more heavily utilized than Compute<small>GPU Speed Of Light Throughput</small></th><td class="num"></td><td class="num"></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="g-two">
+        <div class="g-box">
+          <h4>Warp state</h4>
+          <dl class="g-dl">
+            <div><dt>Warp cycles per issued instruction</dt><dd>17.24</dd></div>
+          </dl>
+        </div>
+        <div class="g-box">
+          <h4>Occupancy: block limits</h4>
+          <dl class="g-dl">
+            <div class="is-binding"><dt>Registers</dt><dd>2 blocks <span class="g-chip">binding</span></dd></div>
+            <div><dt>Shared Mem</dt><dd>6 blocks</dd></div>
+            <div><dt>Warps</dt><dd>4 blocks</dd></div>
+          </dl>
+          <p class="g-fine">Blocks per SM each resource allows. The lowest one sets occupancy.</p>
+        </div>
+      </div>
+      <h4>Full report <small>13 sections, in report order</small></h4>
+      <div class="g-sections">
+        <details>
+          <summary>GPU Speed Of Light Throughput <small>10 metrics · 1 note</small></summary>
+          <div class="details-body">
+            <div class="table-wrap"><table class="data g-metrics"><thead><tr><th scope="col">Metric</th><th scope="col" class="num">Value</th></tr></thead><tbody>
+              <tr><th scope="row">DRAM Frequency</th><td class="num">4.00 Ghz</td></tr>
+              <tr><th scope="row">SM Frequency</th><td class="num">1.15 Ghz</td></tr>
+              <tr><th scope="row">Elapsed Cycles</th><td class="num">15384114 cycle</td></tr>
+              <tr><th scope="row">Memory Throughput</th><td class="num">70.11%</td></tr>
+              <tr><th scope="row">DRAM Throughput</th><td class="num">1.01%</td></tr>
+              <tr><th scope="row">Duration</th><td class="num">13.32 ms</td></tr>
+              <tr><th scope="row">L1/TEX Cache Throughput</th><td class="num">70.76%</td></tr>
+              <tr><th scope="row">L2 Cache Throughput</th><td class="num">6.04%</td></tr>
+              <tr><th scope="row">SM Active Cycles</th><td class="num">15205533.71 cycle</td></tr>
+              <tr><th scope="row">Compute (SM) Throughput</th><td class="num">45.55%</td></tr>
+            </tbody></table></div>
+            <p class="g-note"><span class="eyebrow">OPT</span>Memory is more heavily utilized than Compute: Look at the Memory Workload Analysis section to identify the L1 bottleneck. Check memory replay (coalescing) metrics to make sure you're efficiently utilizing the bytes transferred. Also consider whether it is possible to do more work per memory access (kernel fusion) or whether there are values you can (re)compute.</p>
+          </div>
+        </details>
+        <details>
+          <summary>GPU Speed Of Light Roofline Chart <small>1 note</small></summary>
+          <div class="details-body">
+            <p class="g-note"><span class="eyebrow">INF</span>The ratio of peak float (FP32) to double (FP64) performance on this device is 2:1. The workload achieved 24% of this device's FP32 peak performance and 0% of its FP64 peak performance. See the Profiling Guide (https://docs.nvidia.com/nsight-compute/ProfilingGuide/index.html#roofline) for more details on roofline analysis.</p>
+          </div>
+        </details>
+        <details>
+          <summary>PM Sampling <small>3 metrics</small></summary>
+          <div class="details-body">
+            <div class="table-wrap"><table class="data g-metrics"><thead><tr><th scope="col">Metric</th><th scope="col" class="num">Value</th></tr></thead><tbody>
+              <tr><th scope="row">Maximum Buffer Size</th><td class="num">98.63 Mbyte</td></tr>
+              <tr><th scope="row">Maximum Sampling Interval</th><td class="num">4 us</td></tr>
+              <tr><th scope="row"># Pass Groups</th><td class="num">1</td></tr>
+            </tbody></table></div>
+          </div>
+        </details>
+        <details>
+          <summary>Compute Workload Analysis <small>5 metrics · 1 note</small></summary>
+          <div class="details-body">
+            <div class="table-wrap"><table class="data g-metrics"><thead><tr><th scope="col">Metric</th><th scope="col" class="num">Value</th></tr></thead><tbody>
+              <tr><th scope="row">Executed Ipc Active</th><td class="num">1.84 inst/cycle</td></tr>
+              <tr><th scope="row">Executed Ipc Elapsed</th><td class="num">1.82 inst/cycle</td></tr>
+              <tr><th scope="row">Issue Slots Busy</th><td class="num">45.55%</td></tr>
+              <tr><th scope="row">Issued Ipc Active</th><td class="num">1.84 inst/cycle</td></tr>
+              <tr><th scope="row">SM Busy</th><td class="num">45.55%</td></tr>
+            </tbody></table></div>
+            <p class="g-note"><span class="eyebrow">INF</span>FMA is the highest-utilized pipeline (26.6%) based on elapsed cycles in the workload, taking into account the rates of its different instructions. It executes 32-bit floating point (FADD, FMUL, FMAD, ...) and integer (IMUL, IMAD) operations. It is well-utilized, but should not be a bottleneck.</p>
+          </div>
+        </details>
+        <details>
+          <summary>Memory Workload Analysis <small>12 metrics</small></summary>
+          <div class="details-body">
+            <div class="table-wrap"><table class="data g-metrics"><thead><tr><th scope="col">Metric</th><th scope="col" class="num">Value</th></tr></thead><tbody>
+              <tr><th scope="row">Local Memory Spilling Requests</th><td class="num">0</td></tr>
+              <tr><th scope="row">Local Memory Spilling Request Overhead</th><td class="num">0%</td></tr>
+              <tr><th scope="row">Memory Throughput</th><td class="num">67.30 Gbyte/s</td></tr>
+              <tr><th scope="row">Mem Busy</th><td class="num">70.11%</td></tr>
+              <tr><th scope="row">Max Bandwidth</th><td class="num">62.05%</td></tr>
+              <tr><th scope="row">L1/TEX Hit Rate</th><td class="num">2.88%</td></tr>
+              <tr><th scope="row">L2 Persisting Size</th><td class="num">24.87 Mbyte</td></tr>
+              <tr><th scope="row">L2 Compression Success Rate</th><td class="num">0%</td></tr>
+              <tr><th scope="row">L2 Compression Ratio</th><td class="num">0%</td></tr>
+              <tr><th scope="row">L2 Compression Input Sectors</th><td class="num">2111128 sector</td></tr>
+              <tr><th scope="row">L2 Hit Rate</th><td class="num">79.97%</td></tr>
+              <tr><th scope="row">Mem Pipes Busy</th><td class="num">41.39%</td></tr>
+            </tbody></table></div>
+          </div>
+        </details>
+        <details>
+          <summary>Memory Workload Analysis Chart <small>1 note</small></summary>
+          <div class="details-body">
+            <p class="g-note"><span class="eyebrow">OPT · Est. Speedup: 0.8057%</span>Out of the 67556096.0 bytes sent to the L2 Compression unit only 0.00% were successfully compressed. To increase this success rate, consider marking only those memory regions as compressible that contain the most zero values and/or expose the most homogeneous values.</p>
+          </div>
+        </details>
+        <details>
+          <summary>Scheduler Statistics <small>5 metrics · 1 note</small></summary>
+          <div class="details-body">
+            <div class="table-wrap"><table class="data g-metrics"><thead><tr><th scope="col">Metric</th><th scope="col" class="num">Value</th></tr></thead><tbody>
+              <tr><th scope="row">One or More Eligible</th><td class="num">45.97%</td></tr>
+              <tr><th scope="row">Issued Warp Per Scheduler</th><td class="num">0.46</td></tr>
+              <tr><th scope="row">No Eligible</th><td class="num">54.03%</td></tr>
+              <tr><th scope="row">Active Warps Per Scheduler</th><td class="num">7.93 warp</td></tr>
+              <tr><th scope="row">Eligible Warps Per Scheduler</th><td class="num">1.29 warp</td></tr>
+            </tbody></table></div>
+            <p class="g-note"><span class="eyebrow">OPT · Est. Local Speedup: 29.89%</span>Every scheduler is capable of issuing one instruction per cycle, but for this workload each scheduler only issues an instruction every 2.2 cycles. This might leave hardware resources underutilized and may lead to less optimal performance. Out of the maximum of 16 warps per scheduler, this workload allocates an average of 7.93 active warps per scheduler, but only an average of 1.29 warps were eligible per cycle. Eligible warps are the subset of active warps that are ready to issue their next instruction. Every cycle with no eligible warp results in no instruction being issued and the issue slot remains unused. To increase the number of eligible warps, avoid possible load imbalances due to highly different execution durations per warp. Reducing stalls indicated on the Warp State Statistics and Source Counters sections can help, too.</p>
+          </div>
+        </details>
+        <details>
+          <summary>Warp State Statistics <small>4 metrics</small></summary>
+          <div class="details-body">
+            <div class="table-wrap"><table class="data g-metrics"><thead><tr><th scope="col">Metric</th><th scope="col" class="num">Value</th></tr></thead><tbody>
+              <tr><th scope="row">Warp Cycles Per Issued Instruction</th><td class="num">17.24 cycle</td></tr>
+              <tr><th scope="row">Warp Cycles Per Executed Instruction</th><td class="num">17.24 cycle</td></tr>
+              <tr><th scope="row">Avg. Active Threads Per Warp</th><td class="num">32</td></tr>
+              <tr><th scope="row">Avg. Not Predicated Off Threads Per Warp</th><td class="num">32.00</td></tr>
+            </tbody></table></div>
+          </div>
+        </details>
+        <details>
+          <summary>Instruction Statistics <small>4 metrics</small></summary>
+          <div class="details-body">
+            <div class="table-wrap"><table class="data g-metrics"><thead><tr><th scope="col">Metric</th><th scope="col" class="num">Value</th></tr></thead><tbody>
+              <tr><th scope="row">Avg. Executed Instructions Per Scheduler</th><td class="num">6990764.97 inst</td></tr>
+              <tr><th scope="row">Executed Instructions</th><td class="num">4138532864 inst</td></tr>
+              <tr><th scope="row">Avg. Issued Instructions Per Scheduler</th><td class="num">6990764.97 inst</td></tr>
+              <tr><th scope="row">Issued Instructions</th><td class="num">4138532864 inst</td></tr>
+            </tbody></table></div>
+          </div>
+        </details>
+        <details>
+          <summary>Launch Statistics <small>18 metrics</small></summary>
+          <div class="details-body">
+            <div class="table-wrap"><table class="data g-metrics"><thead><tr><th scope="col">Metric</th><th scope="col" class="num">Value</th></tr></thead><tbody>
+              <tr><th scope="row">Block Size</th><td class="num">512</td></tr>
+              <tr><th scope="row">Cluster Scheduling Policy</th><td class="num">PolicySpread</td></tr>
+              <tr><th scope="row">Cluster Size</th><td class="num">0</td></tr>
+              <tr><th scope="row">Function Cache Configuration</th><td class="num">CachePreferNone</td></tr>
+              <tr><th scope="row">Grid Size</th><td class="num">4096</td></tr>
+              <tr><th scope="row">Preferred Cluster Size</th><td class="num">0</td></tr>
+              <tr><th scope="row">Registers Per Thread</th><td class="num">50 register/thread</td></tr>
+              <tr><th scope="row">Shared Memory Configuration Size</th><td class="num">32.77 Kbyte</td></tr>
+              <tr><th scope="row">Driver Shared Memory Per Block</th><td class="num">1.02 Kbyte/block</td></tr>
+              <tr><th scope="row">Dynamic Shared Memory Per Block</th><td class="num">0 byte/block</td></tr>
+              <tr><th scope="row">Static Shared Memory Per Block</th><td class="num">4.10 Kbyte/block</td></tr>
+              <tr><th scope="row"># SMs</th><td class="num">148 SM</td></tr>
+              <tr><th scope="row">Stack Size</th><td class="num">1024</td></tr>
+              <tr><th scope="row">Threads</th><td class="num">2097152 thread</td></tr>
+              <tr><th scope="row"># TPCs</th><td class="num">74</td></tr>
+              <tr><th scope="row">Enabled TPC IDs</th><td class="num">all</td></tr>
+              <tr><th scope="row">Uses Green Context</th><td class="num">0</td></tr>
+              <tr><th scope="row">Waves Per SM</th><td class="num">13.84</td></tr>
+            </tbody></table></div>
+          </div>
+        </details>
+        <details>
+          <summary>Occupancy <small>13 metrics · 1 note</small></summary>
+          <div class="details-body">
+            <div class="table-wrap"><table class="data g-metrics"><thead><tr><th scope="col">Metric</th><th scope="col" class="num">Value</th></tr></thead><tbody>
+              <tr><th scope="row">Max Active Clusters</th><td class="num">0 cluster</td></tr>
+              <tr><th scope="row">Max Cluster Size</th><td class="num">8 block</td></tr>
+              <tr><th scope="row">Overall GPU Occupancy</th><td class="num">0%</td></tr>
+              <tr><th scope="row">Cluster Occupancy</th><td class="num">0%</td></tr>
+              <tr><th scope="row">Block Limit Barriers</th><td class="num">32 block</td></tr>
+              <tr><th scope="row">Block Limit SM</th><td class="num">32 block</td></tr>
+              <tr><th scope="row">Block Limit Registers</th><td class="num">2 block</td></tr>
+              <tr><th scope="row">Block Limit Shared Mem</th><td class="num">6 block</td></tr>
+              <tr><th scope="row">Block Limit Warps</th><td class="num">4 block</td></tr>
+              <tr><th scope="row">Theoretical Active Warps per SM</th><td class="num">32 warp</td></tr>
+              <tr><th scope="row">Theoretical Occupancy</th><td class="num">50%</td></tr>
+              <tr><th scope="row">Achieved Occupancy</th><td class="num">49.55%</td></tr>
+              <tr><th scope="row">Achieved Active Warps Per SM</th><td class="num">31.71 warp</td></tr>
+            </tbody></table></div>
+            <p class="g-note"><span class="eyebrow">OPT · Est. Speedup: 29.89%</span>The 8.00 theoretical warps per scheduler this kernel can issue according to its occupancy are below the hardware maximum of 16. This kernel's theoretical occupancy (50.0%) is limited by the number of required registers.</p>
+          </div>
+        </details>
+        <details>
+          <summary>GPU and Memory Workload Distribution <small>10 metrics</small></summary>
+          <div class="details-body">
+            <div class="table-wrap"><table class="data g-metrics"><thead><tr><th scope="col">Metric</th><th scope="col" class="num">Value</th></tr></thead><tbody>
+              <tr><th scope="row">Average DRAM Active Cycles</th><td class="num">437800.88 cycle</td></tr>
+              <tr><th scope="row">Total DRAM Elapsed Cycles</th><td class="num">3407284224 cycle</td></tr>
+              <tr><th scope="row">Average L1 Active Cycles</th><td class="num">15205533.71 cycle</td></tr>
+              <tr><th scope="row">Total L1 Elapsed Cycles</th><td class="num">2271370916 cycle</td></tr>
+              <tr><th scope="row">Average L2 Active Cycles</th><td class="num">14262234.98 cycle</td></tr>
+              <tr><th scope="row">Total L2 Elapsed Cycles</th><td class="num">2831407824 cycle</td></tr>
+              <tr><th scope="row">Average SM Active Cycles</th><td class="num">15205533.71 cycle</td></tr>
+              <tr><th scope="row">Total SM Elapsed Cycles</th><td class="num">2271370916 cycle</td></tr>
+              <tr><th scope="row">Average SMSP Active Cycles</th><td class="num">15207964.62 cycle</td></tr>
+              <tr><th scope="row">Total SMSP Elapsed Cycles</th><td class="num">9085483664 cycle</td></tr>
+            </tbody></table></div>
+          </div>
+        </details>
+        <details>
+          <summary>Source Counters <small>4 metrics</small></summary>
+          <div class="details-body">
+            <div class="table-wrap"><table class="data g-metrics"><thead><tr><th scope="col">Metric</th><th scope="col" class="num">Value</th></tr></thead><tbody>
+              <tr><th scope="row">Branch Instructions Ratio</th><td class="num">0.01%</td></tr>
+              <tr><th scope="row">Branch Instructions</th><td class="num">34734080 inst</td></tr>
+              <tr><th scope="row">Branch Efficiency</th><td class="num">100%</td></tr>
+              <tr><th scope="row">Avg. Divergent Branches</th><td class="num">0 branches</td></tr>
+            </tbody></table></div>
+          </div>
+        </details>
+      </div>
+    </div>
+    <p class="g-fine">Parsed from the Nsight Compute Details page exported as text, at 4096 x 4096. The two GPUs were profiled with different Nsight Compute versions, so their reports do not have identical sections. The original <code>.ncu-rep</code> files are in the <a href="https://github.com/VrajPatel105/blackwell-gemm/releases/tag/v0.1-fp32" target="_blank" rel="noopener">v0.1-fp32 release</a> and open in the Nsight Compute UI.</p>
+  </div>
+    <!-- /gemm:dashboard -->
+  </section>
+
+  <!-- gemm:pager -->
+    <nav class="g-pager" aria-label="Kernels">
+      <a class="g-pager__prev" href="../02-shared-memory-tiling/" rel="prev"><small>Previous</small>02 · Shared-memory tiling</a>
+      <a class="g-pager__next" href="../04-2d-thread-tiling/" rel="next"><small>Next</small>04 · 2D thread tiling</a>
+    </nav>
+    <!-- /gemm:pager -->
+
+  <footer class="post-foot">
+    <div class="btns">
+      <a class="btn" href="../">← Blackwell GEMM</a>
+      <a class="btn" href="https://github.com/VrajPatel105/blackwell-gemm" target="_blank" rel="noopener">Repo<span class="vh">: blackwell-gemm</span></a>
+      <a class="btn" href="https://github.com/VrajPatel105/blackwell-gemm/releases/tag/v0.1-fp32" target="_blank" rel="noopener">Release v0.1-fp32<span class="vh">: Nsight report files</span></a>
+    </div>
+    <p>Vraj Patel · Plain HTML on GitHub Pages. Numbers from <code>results/rtx5080_laptop.csv</code>, <code>results/b200.csv</code> and the Nsight Compute reports.</p>
+  </footer>
+
+</article>
+</main>
+<script src="../gemm.js"></script>
+<script src="../../assets/post.js"></script>
+</body>
+</html>

@@ -101,12 +101,12 @@
     <!-- gemm:kernels -->
     <ol class="g-kernels">
       <li><a href="00-naive/">00 · Naive</a><p>One thread per output element, reading straight from global memory.</p></li>
-      <li><span>01 · Coalesced</span> <small>page coming</small><p>Neighboring threads read neighboring memory, so loads get batched.</p></li>
-      <li><span>02 · Shared-memory tiling</span> <small>page coming</small><p>Each block copies a tile of A and B into shared memory and reuses it.</p></li>
-      <li><span>03 · 1D thread tiling</span> <small>page coming</small><p>Each thread computes 8 outputs instead of 1 and keeps its sums in registers.</p></li>
-      <li><span>04 · 2D thread tiling</span> <small>page coming</small><p>Each thread computes an 8x8 patch, reusing every loaded value 8 times.</p></li>
-      <li><span>05 · float4 loads</span> <small>page coming</small><p>Loads four floats at a time and stores A transposed so shared-memory reads are vectorized too.</p></li>
-      <li><span>06 · Warp tiling</span> <small>page coming</small><p>Splits each block&#x27;s tile between warps, then between the threads of each warp. This was the hardest one.</p></li>
+      <li><a href="01-coalesced/">01 · Coalesced</a><p>Neighboring threads read neighboring memory, so loads get batched.</p></li>
+      <li><a href="02-shared-memory-tiling/">02 · Shared-memory tiling</a><p>Each block copies a tile of A and B into shared memory and reuses it.</p></li>
+      <li><a href="03-1d-thread-tiling/">03 · 1D thread tiling</a><p>Each thread computes 8 outputs instead of 1 and keeps its sums in registers.</p></li>
+      <li><a href="04-2d-thread-tiling/">04 · 2D thread tiling</a><p>Each thread computes an 8x8 patch, reusing every loaded value 8 times.</p></li>
+      <li><a href="05-float4-loads/">05 · float4 loads</a><p>Loads four floats at a time and stores A transposed so shared-memory reads are vectorized too.</p></li>
+      <li><a href="06-warp-tiling/">06 · Warp tiling</a><p>Splits each block&#x27;s tile between warps, then between the threads of each warp. This was the hardest one.</p></li>
     </ol>
     <!-- /gemm:kernels -->
   </section>

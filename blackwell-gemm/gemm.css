@@ -71,7 +71,7 @@
 }
 
 /* the full report */
-.g-sections { display: grid; gap: var(--s-1); }
+.g-sections { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--s-1); }
 .g-sections .details-body > * + * { margin-top: var(--s-2); }
 .g-metrics th[scope="row"] { font-weight: 400; }
 .post .g-note { max-width: none; font-size: var(--fs-14); line-height: 1.6; overflow-wrap: anywhere; }
